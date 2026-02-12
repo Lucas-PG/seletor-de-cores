@@ -103,12 +103,13 @@ header {
 }
 
 .body-image-info {
-	background-color: var(--box-background);
+	background-color: var(--background-hex);
 	width: 100%;
 	height: 55%;
 	border-radius: 12px;
 	display: flex;
 	max-height: 500px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
 }
 
 .preview-div {
@@ -193,7 +194,7 @@ header {
 	border: 1px solid var(--border-hex);
 	margin-left: 20%;
 	font-size: 16px;
-	background-color: var(--background-hex);
+	background-color: var(--box-background);
 	cursor: pointer;
 }
 
@@ -216,7 +217,7 @@ header {
 }
 
 .input-copy {
-	background-color: var(--background-hex);
+	background-color: var(--box-background);
 	display: flex;
 	align-items: center;
 	justify-content: center;
