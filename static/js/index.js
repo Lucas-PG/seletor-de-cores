@@ -25,7 +25,7 @@ function buildImageInfoDiv() {
     copyDiv.className = "input-copy";
 
     const copyIcon = document.createElement("img");
-    copyIcon.src = "icons/copy-regular-full.svg";
+    copyIcon.src = "static/icons/copy-regular-full.svg";
     copyIcon.className = "copy-icon";
     copyIcon.alt = "Copiar";
     copyDiv.appendChild(copyIcon);
