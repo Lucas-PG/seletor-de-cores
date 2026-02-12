@@ -127,6 +127,9 @@ header {
 #preview {
 	max-width: 100%;
 	max-height: 60%;
+	touch-action: none;
+	user-select: none;
+	-webkit-user-drag: none;
 }
 
 .preview-image-footer {
@@ -294,24 +297,21 @@ header {
 	background: rgba(33, 40, 66, 0.95);
 }
 
-
-@media (max-width: 1850px) {
-	:root {
-		--content-width: 65%;
-	}
-}
-
-
-@media (max-width: 1500px) {
+@media (max-width: 1250px) {
 	:root {
 		--content-width: 70%;
 	}
 }
 
-
 @media (max-width: 1100px) {
 	:root {
-		--content-width: 90%;
+		--content-width: 80%;
+	}
+}
+
+@media (max-width: 900px) {
+	:root {
+		--content-width: 80%;
 	}
 }
 
@@ -327,7 +327,7 @@ header {
 	}
 
 	.content {
-			padding: 50px 0px;
+		padding: 50px 0px;
 	}
 
 
