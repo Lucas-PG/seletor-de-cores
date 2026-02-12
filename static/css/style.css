@@ -21,7 +21,8 @@
 }
 
 body {
-	height: 100vh;
+	height: auto;
+	min-height: 100vh;
 	width: 100vw;
 	max-width: 100vw;
 	min-width: 320px;
@@ -35,7 +36,8 @@ body {
 
 
 header {
-	height: 8%;
+	height: 8vh;
+	min-height: 70px;
 	width: 100%;
 	background-color: var(--dark-blue-hex);
 	display: flex;
@@ -59,24 +61,28 @@ header {
 .content {
 	width: var(--content-width);
 	height: 80%;
-	/* background-color: aqua; */
-	margin-top: 3%;
+	min-height: 80vh;
+	margin-top: 20px;
 	display: flex;
 	flex-direction: column;
 	align-items: start;
 	justify-content: start;
-	gap: 3%;
+	gap: 20px;
+	min-height: 400px;
+	padding: 50px 0px;
 }
 
 .body-header {
 	font-size: 18px;
-	height: 3%;
+	height: 3vh;
 }
 
 .body-image-selector {
 	width: 100%;
-	height: 25%;
+	height: 25vh;
+	min-height: 200px;
 }
+
 
 
 .upload-box {
@@ -105,11 +111,12 @@ header {
 .body-image-info {
 	background-color: var(--background-hex);
 	width: 100%;
-	height: 55%;
+	height: 44vh;
 	border-radius: 12px;
 	display: flex;
 	max-height: 500px;
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+	min-height: 400px;
 }
 
 .preview-div {
@@ -142,10 +149,9 @@ header {
 	height: 100%;
 	border-top-right-radius: 12px;
 	border-bottom-right-radius: 12px;
-
 	display: flex;
 	flex-direction: column;
-	gap: 5%;
+	gap: 35px;
 	padding: 5%;
 	box-sizing: border-box;
 	align-items: start;
@@ -327,10 +333,6 @@ header {
 		height: 100px;
 	}
 
-	.content {
-		padding: 50px 0px;
-	}
-
 
 	.upload-box {
 		height: 150px;
@@ -350,7 +352,7 @@ header {
 		width: 100%;
 		height: 50%;
 		align-items: center;
-		gap: 3vh;
+		gap: 20px;
 	}
 
 
