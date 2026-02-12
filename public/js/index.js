@@ -14,22 +14,62 @@ function buildImageInfoDiv() {
 
     const input = document.createElement("input");
     input.type = "text";
-    input.disabled = true;
+    input.readOnly = true;
     input.id = inputId;
 
     const tag = document.createElement("div");
     tag.className = "image-info-input-header";
     tag.textContent = label;
 
+    const copyDiv = document.createElement("div");
+    copyDiv.className = "input-copy";
+
+    const copyIcon = document.createElement("img");
+    copyIcon.src = "public/icons/copy-regular-full.svg";
+    copyIcon.className = "copy-icon";
+    copyIcon.alt = "Copiar";
+    copyDiv.appendChild(copyIcon);
+
+    function copyValue() {
+      if (!input.value) return;
+
+      navigator.clipboard
+        .writeText(input.value)
+        .then(() => {
+          toast("Copiado!", "success");
+          copyIcon.style.opacity = "0.5";
+          setTimeout(() => {
+            copyIcon.style.opacity = "1";
+          }, 200);
+        })
+        .catch(() => {
+          toast("Não foi possível copiar.", "error");
+          console.error("Erro ao copiar:", err);
+        });
+    }
+
+    input.addEventListener("click", copyValue);
+    copyDiv.addEventListener("click", copyValue);
+
     row.appendChild(input);
     row.appendChild(tag);
+    row.appendChild(copyDiv);
     return row;
   };
 
   infoDiv.appendChild(header);
-  infoDiv.appendChild(makeRow("HEX", "outHex"));
-  infoDiv.appendChild(makeRow("RGBA", "outRGBA"));
-  infoDiv.appendChild(makeRow("HSL", "outHsl"));
+
+  const colorInputs = document.createElement("div");
+  colorInputs.className = "color-inputs";
+
+  colorInputs.appendChild(makeRow("HEX", "outHex"));
+  colorInputs.appendChild(makeRow("RGBA", "outRGBA"));
+  colorInputs.appendChild(makeRow("HSL", "outHsl"));
+
+  infoDiv.appendChild(colorInputs);
+
+  // TODO: Pallete?
+  infoDiv.appendChild(document.createElement("div"));
 
   return infoDiv;
 }
@@ -54,6 +94,7 @@ function handleImageFile(file) {
   const header = document.createElement("span");
   header.className = "preview-image-header";
   header.textContent = "Imagem";
+  header.className = "image-info-header";
 
   const img = document.createElement("img");
   img.id = "preview";
@@ -62,12 +103,10 @@ function handleImageFile(file) {
   img.style.maxWidth = "100%";
   img.style.display = "block";
 
-  // ===== CANVAS FONTE (pixel real) =====
   const sourceCanvas = document.createElement("canvas");
   const sourceCtx = sourceCanvas.getContext("2d", { willReadFrequently: true });
 
   img.onload = () => {
-    // tamanho real da imagem
     sourceCanvas.width = img.naturalWidth;
     sourceCanvas.height = img.naturalHeight;
     sourceCtx.drawImage(img, 0, 0);
@@ -145,8 +184,8 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
   const sampleSize = 14;
 
   function positionLoupe(e) {
-    const offsetX = 5; // direita
-    const offsetY = 5; // cima
+    const offsetX = 5;
+    const offsetY = 5;
 
     const loupeW = loupe.offsetWidth;
     const loupeH = loupe.offsetHeight;
@@ -253,6 +292,30 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
   img.addEventListener("click", onClick);
 }
 
+function toast(message, type = "info", ms = 1600) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = message;
+
+  container.appendChild(t);
+
+  requestAnimationFrame(() => t.classList.add("show"));
+
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => {
+      if (container.contains(t)) {
+        t.remove();
+      }
+    }, 200);
+  }, ms);
+}
+
 imageInput.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   handleImageFile(file);
@@ -262,12 +325,19 @@ window.addEventListener("paste", (e) => {
   const items = e.clipboardData?.items;
   if (!items) return;
 
+  let foundImage = false;
+
   for (const item of items) {
     if (item.type?.startsWith("image/")) {
       const file = item.getAsFile();
       handleImageFile(file);
+      foundImage = true;
       e.preventDefault();
       break;
     }
+  }
+
+  if (!foundImage) {
+    toast("Por favor, cole uma imagem.", "error", (ms = 3000));
   }
 });
