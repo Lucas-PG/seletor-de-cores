@@ -323,7 +323,7 @@ header {
 }
 
 
-@media (max-width: 800px) {
+@media (max-width: 840px) {
 	body {
 		height: auto;
 		max-width: 100vw;
