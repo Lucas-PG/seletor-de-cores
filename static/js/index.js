@@ -120,7 +120,11 @@ function handleImageFile(file) {
 
   const footer = document.createElement("span");
   footer.className = "preview-image-footer";
-  footer.textContent = "Passe o mouse por cima da imagem";
+  const isTouch = "ontouchstart" in window;
+
+  footer.textContent = isTouch
+    ? "Toque na imagem"
+    : "Passe o mouse por cima da imagem";
 
   previewDiv.appendChild(header);
   previewDiv.appendChild(img);
