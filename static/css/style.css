@@ -10,7 +10,7 @@
 	--background-hex: #fafafa;
 	--dark-blue-hex: #212842;
 	--box-background: #EAEBEB;
-	--boder-hex: #E5E7EB;
+	--boder-hex: #D6D6D6;
 	--content-width: 50%;
 }
 
@@ -128,7 +128,7 @@ header {
 }
 
 .preview-image-footer {
-		font-size: 20px
+	font-size: 20px
 }
 
 .image-info-div {
@@ -154,13 +154,24 @@ header {
 .color-inputs {
 	display: flex;
 	flex-direction: column;
-	gap: 10%;
+	gap: 20px;
 	box-sizing: border-box;
 	align-items: start;
 	justify-content: start;
 	width: 100%;
 	height: 60%;
 	position: relative;
+}
+
+.color-box {
+	width: 100%;
+	height: 45px;
+	border-radius: 12px;
+	box-sizing: border-box;
+}
+
+.color-box-header {
+		height: 20px;
 }
 
 .image-info-input {
@@ -171,6 +182,8 @@ header {
 	position: relative;
 	cursor: pointer;
 }
+
+
 
 .image-info-input>input {
 	width: 65%;

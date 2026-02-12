@@ -6,7 +6,7 @@ function buildImageInfoDiv() {
 
   const header = document.createElement("span");
   header.className = "image-info-header";
-  header.textContent = "Cor";
+  header.textContent = "Cor selecionada";
 
   const makeRow = (label, inputId) => {
     const row = document.createElement("div");
@@ -69,7 +69,11 @@ function buildImageInfoDiv() {
   infoDiv.appendChild(colorInputs);
 
   // TODO: Pallete?
-  infoDiv.appendChild(document.createElement("div"));
+  const colorBox = document.createElement("div");
+  colorBox.className = "color-box hidden";
+  colorBox.id = "colorBox";
+
+  infoDiv.appendChild(colorBox);
 
   return infoDiv;
 }
@@ -281,6 +285,13 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
     const hex = rgbToHex(r, g, b);
     const alpha = +(a / 255).toFixed(2);
     const hsl = rgbToHsl(r, g, b);
+
+    const colorBox = document.getElementById("colorBox");
+
+    if (colorBox) {
+      colorBox.style.backgroundColor = hex;
+      colorBox.classList.remove("hidden");
+    }
 
     outHex.value = hex;
     outRGBA.value = `rgba(${r}, ${g}, ${b}, ${alpha})`;
