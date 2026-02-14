@@ -6,7 +6,7 @@ function buildImageInfoDiv() {
 
   const header = document.createElement("span");
   header.className = "image-info-header";
-  header.textContent = "Cor selecionada";
+  header.textContent = "Códigos";
 
   const makeRow = (label, inputId) => {
     const row = document.createElement("div");
@@ -68,12 +68,21 @@ function buildImageInfoDiv() {
 
   infoDiv.appendChild(colorInputs);
 
-  // TODO: Pallete?
+  const colorBoxDiv = document.createElement("div");
+  colorBoxDiv.className = "color-box-div is-hidden";
+  colorBoxDiv.id = "colorBoxDiv";
+
+  const colorBoxHeader = document.createElement("span");
+  colorBoxHeader.id = "colorBoxHeader";
+
   const colorBox = document.createElement("div");
-  colorBox.className = "color-box hidden";
+  colorBox.className = "color-box";
   colorBox.id = "colorBox";
 
-  infoDiv.appendChild(colorBox);
+  colorBoxDiv.appendChild(colorBoxHeader);
+  colorBoxDiv.appendChild(colorBox);
+
+  infoDiv.appendChild(colorBoxDiv);
 
   return infoDiv;
 }
@@ -290,11 +299,14 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
     const alpha = +(a / 255).toFixed(2);
     const hsl = rgbToHsl(r, g, b);
 
+    const colorBoxDiv = document.getElementById("colorBoxDiv");
+    const colorBoxHeader = document.getElementById("colorBoxHeader");
     const colorBox = document.getElementById("colorBox");
 
-    if (colorBox) {
+    if (colorBoxDiv) {
       colorBox.style.backgroundColor = hex;
-      colorBox.classList.remove("hidden");
+      colorBoxDiv.classList.remove("is-hidden");
+      colorBoxHeader.innerHTML = "Cor Selecionada";
     }
 
     outHex.value = hex;
