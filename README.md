@@ -1,7 +1,18 @@
 # Seletor de Cores
 
-Site simples para extrair cores de imagens de forma rápida e prática.
+Ferramenta online para extrair cores de imagens de forma rápida.
 
-O usuário pode colar ou enviar uma imagem, clicar em qualquer pixel e obter os códigos da cor (HEX/RGB/HSL).
+## Como funciona
 
-Disponível em: https://seletordecores.com
+1. Envie ou cole uma imagem
+2. Clique no ponto desejado
+3. Copie a cor em `HEX`, `RGBA` ou `HSL`
+
+## Recursos
+
+- Uso direto no navegador
+- Compatível com desktop e mobile
+- Seleção precisa com lupa
+- Cópia rápida dos códigos de cor
+
+Acesse: [https://seletordecores.com.br](https://seletordecores.com.br)
