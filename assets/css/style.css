@@ -276,6 +276,8 @@ body {
   border-radius: 10px;
   border: 1px solid var(--panel-border);
   background: #f5f6fa;
+  cursor: crosshair;
+  touch-action: none;
 }
 
 .preview-image-footer {

@@ -7,6 +7,7 @@ function toast(message, type = "info") {
   const container = document.getElementById("toast-container");
   if (!container) return;
 
+  // Keep only one toast visible at a time.
   container.replaceChildren();
 
   const node = document.createElement("div");
@@ -263,29 +264,58 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
     loupe.style.top = `${top}px`;
   };
 
-  img.addEventListener("mousemove", (event) => {
-    const { x, y } = getImageXY(event, img);
-
+  const sampleAtPoint = (point, shouldApply = false) => {
+    const { x, y } = getImageXY(point, img);
     loupe.style.display = "block";
-    positionLoupe(event);
+    positionLoupe(point);
     drawLoupe(x, y);
+
+    if (shouldApply) {
+      applyColor(x, y);
+    }
+  };
+
+  let isDragging = false;
+
+  img.addEventListener("pointerdown", (event) => {
+    isDragging = true;
+    img.setPointerCapture(event.pointerId);
+    sampleAtPoint(event, true);
+    event.preventDefault();
   });
 
-  img.addEventListener("mouseleave", () => {
+  img.addEventListener("pointermove", (event) => {
+    if (isDragging) {
+      sampleAtPoint(event, true);
+      event.preventDefault();
+      return;
+    }
+
+    if (event.pointerType === "mouse") {
+      sampleAtPoint(event, false);
+    }
+  });
+
+  const stopDragging = (event) => {
+    if (!isDragging) return;
+
+    sampleAtPoint(event, true);
+    isDragging = false;
+
+    if (event.pointerType !== "mouse") {
+      loupe.style.display = "none";
+    }
+  };
+
+  img.addEventListener("pointerup", stopDragging);
+  img.addEventListener("pointercancel", () => {
+    isDragging = false;
     loupe.style.display = "none";
   });
-
-  img.addEventListener("click", (event) => {
-    const { x, y } = getImageXY(event, img);
-    applyColor(x, y);
-  });
-
-  img.addEventListener("touchstart", (event) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-
-    const { x, y } = getImageXY(touch, img);
-    applyColor(x, y);
+  img.addEventListener("mouseleave", () => {
+    if (!isDragging) {
+      loupe.style.display = "none";
+    }
   });
 }
 
@@ -325,8 +355,8 @@ function handleImageFile(file) {
 
   const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   footer.textContent = isTouch
-    ? "Toque na imagem para selecionar a cor"
-    : "Passe o mouse para ampliar e clique para selecionar a cor";
+    ? "Toque e arraste na imagem para selecionar a cor com precisão"
+    : "Passe o mouse para ampliar. Clique e arraste para capturar o pixel ideal";
 
   previewDiv.appendChild(header);
   previewDiv.appendChild(img);
@@ -347,7 +377,7 @@ function handleImageFile(file) {
     sourceCtx.drawImage(img, 0, 0);
 
     attachPicker(img, sourceCanvas, sourceCtx);
-    toast("Imagem carregada. Clique em um ponto para capturar a cor.", "success");
+    toast("Imagem carregada. Clique ou arraste para capturar a cor.", "success");
   };
 }
 
