@@ -7,6 +7,8 @@ function toast(message, type = "info") {
   const container = document.getElementById("toast-container");
   if (!container) return;
 
+  container.replaceChildren();
+
   const node = document.createElement("div");
   node.className = `toast ${type}`;
   node.textContent = message;

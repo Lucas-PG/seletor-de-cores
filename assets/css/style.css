@@ -227,7 +227,9 @@ body {
 
 .ad-slot p {
   margin: 0;
+  width: 100%;
   font-size: 0.92rem;
+  text-align: center;
 }
 
 .ad-slot-horizontal {
