@@ -157,82 +157,108 @@ function buildImageInfoDiv() {
   return infoDiv;
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function getImageXY(point, img) {
   const rect = img.getBoundingClientRect();
   const mx = point.clientX - rect.left;
   const my = point.clientY - rect.top;
-
-  const x = Math.floor((mx / rect.width) * img.naturalWidth);
-  const y = Math.floor((my / rect.height) * img.naturalHeight);
+  const xFloat = clamp((mx / rect.width) * img.naturalWidth, 0, img.naturalWidth - 1);
+  const yFloat = clamp((my / rect.height) * img.naturalHeight, 0, img.naturalHeight - 1);
 
   return {
-    x: Math.max(0, Math.min(img.naturalWidth - 1, x)),
-    y: Math.max(0, Math.min(img.naturalHeight - 1, y)),
+    x: Math.round(xFloat),
+    y: Math.round(yFloat),
+    xFloat,
+    yFloat,
   };
 }
 
 const loupe = document.createElement("div");
 loupe.id = "loupe";
-loupe.innerHTML = '<canvas id="loupeCanvas" width="140" height="140"></canvas>';
+loupe.innerHTML = `
+  <canvas id="loupeCanvas" width="220" height="220"></canvas>
+  <div id="loupeCenter" aria-hidden="true"></div>
+  <div id="loupeHex" aria-live="polite">#000000</div>
+`;
 document.body.appendChild(loupe);
 
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d", { willReadFrequently: true });
+const loupeCenter = document.getElementById("loupeCenter");
+const loupeHex = document.getElementById("loupeHex");
+const loupeSize = 220;
+const sampleSize = 13;
+let activeKeydownHandler = null;
+
+function setupLoupeCanvas() {
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  loupeCanvas.width = Math.round(loupeSize * dpr);
+  loupeCanvas.height = Math.round(loupeSize * dpr);
+  loupeCtx.setTransform(1, 0, 0, 1, 0, 0);
+  loupeCtx.scale(dpr, dpr);
+}
+
+setupLoupeCanvas();
+window.addEventListener("resize", setupLoupeCanvas);
 
 function attachPicker(img, sourceCanvas, sourceCtx) {
   const outHex = document.getElementById("outHex");
   const outRGBA = document.getElementById("outRGBA");
   const outHsl = document.getElementById("outHsl");
 
-  const zoom = 10;
-  const sampleSize = 14;
+  const pixelBlock = loupeSize / sampleSize;
+  let currentImgX = 0;
+  let currentImgY = 0;
+  let loupeActive = false;
 
   const drawLoupe = (x, y) => {
-    loupeCtx.imageSmoothingEnabled = false;
-
     const half = Math.floor(sampleSize / 2);
-    const sx = Math.max(0, Math.min(sourceCanvas.width - sampleSize, x - half));
-    const sy = Math.max(0, Math.min(sourceCanvas.height - sampleSize, y - half));
+    const sx = clamp(x - half, 0, sourceCanvas.width - sampleSize);
+    const sy = clamp(y - half, 0, sourceCanvas.height - sampleSize);
 
-    loupeCtx.clearRect(0, 0, loupeCanvas.width, loupeCanvas.height);
-    loupeCtx.drawImage(
-      sourceCanvas,
-      sx,
-      sy,
-      sampleSize,
-      sampleSize,
-      0,
-      0,
-      sampleSize * zoom,
-      sampleSize * zoom,
-    );
+    loupeCtx.clearRect(0, 0, loupeSize, loupeSize);
+    loupeCtx.imageSmoothingEnabled = false;
+    loupeCtx.drawImage(sourceCanvas, sx, sy, sampleSize, sampleSize, 0, 0, loupeSize, loupeSize);
 
     loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.15)";
-    for (let i = 0; i <= sampleSize; i += 1) {
+    loupeCtx.lineWidth = 1;
+    for (let i = 0; i <= sampleSize; i++) {
       loupeCtx.beginPath();
-      loupeCtx.moveTo(i * zoom, 0);
-      loupeCtx.lineTo(i * zoom, sampleSize * zoom);
+      loupeCtx.moveTo(i * pixelBlock, 0);
+      loupeCtx.lineTo(i * pixelBlock, loupeSize);
       loupeCtx.stroke();
-
       loupeCtx.beginPath();
-      loupeCtx.moveTo(0, i * zoom);
-      loupeCtx.lineTo(sampleSize * zoom, i * zoom);
+      loupeCtx.moveTo(0, i * pixelBlock);
+      loupeCtx.lineTo(loupeSize, i * pixelBlock);
       loupeCtx.stroke();
     }
 
-    const center = Math.floor(sampleSize / 2) * zoom;
-    loupeCtx.strokeStyle = "rgba(255, 0, 0, 0.9)";
+    const highlightX = (x - sx) * pixelBlock;
+    const highlightY = (y - sy) * pixelBlock;
+    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.65)";
     loupeCtx.lineWidth = 2;
-    loupeCtx.strokeRect(center, center, zoom, zoom);
+    loupeCtx.strokeRect(highlightX, highlightY, pixelBlock, pixelBlock);
   };
 
-  const applyColor = (x, y) => {
+  const getPixelColor = (x, y) => {
     const [r, g, b, a] = sourceCtx.getImageData(x, y, 1, 1).data;
-
     const hex = rgbToHex(r, g, b);
     const alpha = +(a / 255).toFixed(2);
     const hsl = rgbToHsl(r, g, b);
+    return { r, g, b, alpha, hex, hsl };
+  };
 
+  const updateLiveOverlay = (hex) => {
+    loupe.style.setProperty("--loupe-color", hex);
+    loupeCenter.style.borderColor = hex;
+    loupeHex.textContent = hex;
+  };
+
+  const applyColor = (x, y) => {
+    const { r, g, b, alpha, hex, hsl } = getPixelColor(x, y);
     const colorBoxDiv = document.getElementById("colorBoxDiv");
     const colorBoxHeader = document.getElementById("colorBoxHeader");
     const colorBox = document.getElementById("colorBox");
@@ -249,73 +275,162 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
   };
 
   const positionLoupe = (point) => {
-    const offsetX = 8;
-    const offsetY = 6;
-    const width = loupe.offsetWidth;
-    const height = loupe.offsetHeight;
-
-    let left = point.clientX + offsetX;
-    let top = point.clientY - height - offsetY;
-
-    left = Math.min(left, window.innerWidth - width - 8);
-    top = Math.max(top, 8);
-
-    loupe.style.left = `${left}px`;
-    loupe.style.top = `${top}px`;
+    const half = loupeSize / 2;
+    loupe.style.transform = `translate(${point.clientX - half}px, ${point.clientY - half}px)`;
   };
 
-  const sampleAtPoint = (point, shouldApply = false) => {
+  const positionLoupeFromImageCoords = (x, y) => {
+    const rect = img.getBoundingClientRect();
+    const clientX = rect.left + (x / img.naturalWidth) * rect.width;
+    const clientY = rect.top + (y / img.naturalHeight) * rect.height;
+    const half = loupeSize / 2;
+    loupe.style.transform = `translate(${clientX - half}px, ${clientY - half}px)`;
+  };
+
+  const renderPreviewAtPoint = (point) => {
     const { x, y } = getImageXY(point, img);
+    currentImgX = x;
+    currentImgY = y;
+    const { hex } = getPixelColor(x, y);
+
+    drawLoupe(x, y);
+    updateLiveOverlay(hex);
+  };
+
+  let previewRafId = null;
+  let pendingPreviewPoint = null;
+
+  const schedulePreviewRender = () => {
+    if (previewRafId !== null) return;
+    previewRafId = window.requestAnimationFrame(() => {
+      previewRafId = null;
+      if (!pendingPreviewPoint) return;
+      renderPreviewAtPoint(pendingPreviewPoint);
+      pendingPreviewPoint = null;
+    });
+  };
+
+  const previewAtPoint = (point, sync = false) => {
     loupe.style.display = "block";
     positionLoupe(point);
-    drawLoupe(x, y);
 
-    if (shouldApply) {
-      applyColor(x, y);
+    if (sync) {
+      renderPreviewAtPoint(point);
+      pendingPreviewPoint = null;
+      if (previewRafId !== null) {
+        window.cancelAnimationFrame(previewRafId);
+        previewRafId = null;
+      }
+      return;
     }
+
+    pendingPreviewPoint = {
+      clientX: point.clientX,
+      clientY: point.clientY,
+    };
+    schedulePreviewRender();
   };
 
-  let isDragging = false;
+  const commitAtPoint = (point) => {
+    const { x, y } = getImageXY(point, img);
+    applyColor(x, y);
+  };
+
+  if (activeKeydownHandler) {
+    document.removeEventListener("keydown", activeKeydownHandler);
+  }
+  const onKeydown = (event) => {
+    if (!loupeActive) return;
+    let dx = 0, dy = 0;
+    switch (event.key) {
+      case "ArrowLeft":  dx = -1; break;
+      case "ArrowRight": dx =  1; break;
+      case "ArrowUp":    dy = -1; break;
+      case "ArrowDown":  dy =  1; break;
+      default: return;
+    }
+    event.preventDefault();
+    currentImgX = clamp(currentImgX + dx, 0, img.naturalWidth - 1);
+    currentImgY = clamp(currentImgY + dy, 0, img.naturalHeight - 1);
+    drawLoupe(currentImgX, currentImgY);
+    const { hex } = getPixelColor(currentImgX, currentImgY);
+    updateLiveOverlay(hex);
+    positionLoupeFromImageCoords(currentImgX, currentImgY);
+    applyColor(currentImgX, currentImgY);
+  };
+  activeKeydownHandler = onKeydown;
+  document.addEventListener("keydown", onKeydown);
+
+  let isPointerDown = false;
+  let activePointerType = "mouse";
 
   img.addEventListener("pointerdown", (event) => {
-    isDragging = true;
+    isPointerDown = true;
+    loupeActive = true;
+    activePointerType = event.pointerType || "mouse";
     img.setPointerCapture(event.pointerId);
-    sampleAtPoint(event, true);
+    previewAtPoint(event, true);
     event.preventDefault();
   });
 
   img.addEventListener("pointermove", (event) => {
-    if (isDragging) {
-      sampleAtPoint(event, true);
+    if (isPointerDown) {
+      previewAtPoint(event);
       event.preventDefault();
       return;
     }
 
     if (event.pointerType === "mouse") {
-      sampleAtPoint(event, false);
+      previewAtPoint(event);
     }
   });
 
-  const stopDragging = (event) => {
-    if (!isDragging) return;
+  img.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse") {
+      img.classList.add("is-picking");
+      loupeActive = true;
+    }
+  });
 
-    sampleAtPoint(event, true);
-    isDragging = false;
+  const stopPointer = (event) => {
+    if (!isPointerDown) return;
 
-    if (event.pointerType !== "mouse") {
+    previewAtPoint(event, true);
+    isPointerDown = false;
+    img.releasePointerCapture(event.pointerId);
+
+    if (activePointerType !== "mouse") {
+      commitAtPoint(event);
       loupe.style.display = "none";
     }
   };
 
-  img.addEventListener("pointerup", stopDragging);
+  img.addEventListener("pointerup", stopPointer);
+  img.addEventListener("click", (event) => {
+    if (activePointerType !== "mouse") return;
+    previewAtPoint(event, true);
+    commitAtPoint(event);
+  });
   img.addEventListener("pointercancel", () => {
-    isDragging = false;
+    isPointerDown = false;
+    loupeActive = false;
+    pendingPreviewPoint = null;
+    if (previewRafId !== null) {
+      window.cancelAnimationFrame(previewRafId);
+      previewRafId = null;
+    }
     loupe.style.display = "none";
+    img.classList.remove("is-picking");
   });
   img.addEventListener("mouseleave", () => {
-    if (!isDragging) {
-      loupe.style.display = "none";
+    loupeActive = false;
+    pendingPreviewPoint = null;
+    if (previewRafId !== null) {
+      window.cancelAnimationFrame(previewRafId);
+      previewRafId = null;
     }
+    loupe.style.display = "none";
+    img.classList.remove("is-picking");
   });
 }
 
@@ -355,8 +470,8 @@ function handleImageFile(file) {
 
   const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   footer.textContent = isTouch
-    ? "Toque e arraste na imagem para selecionar a cor com precisão"
-    : "Passe o mouse para ampliar. Clique e arraste para capturar o pixel ideal";
+    ? "Toque e arraste para pré-visualizar. Solte para selecionar a cor."
+    : "Passe o mouse para ampliar. Clique para selecionar a cor.";
 
   previewDiv.appendChild(header);
   previewDiv.appendChild(img);
@@ -377,7 +492,7 @@ function handleImageFile(file) {
     sourceCtx.drawImage(img, 0, 0);
 
     attachPicker(img, sourceCanvas, sourceCtx);
-    toast("Imagem carregada. Clique ou arraste para capturar a cor.", "success");
+    toast("Imagem carregada. Passe o mouse e clique para capturar a cor.", "success");
   };
 }
 

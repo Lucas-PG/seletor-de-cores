@@ -280,6 +280,10 @@ body {
   touch-action: none;
 }
 
+#preview.is-picking {
+  cursor: none;
+}
+
 .preview-image-footer {
   margin-top: 0.75rem;
   color: var(--muted);
@@ -483,11 +487,15 @@ body {
 }
 
 #loupe {
+  --loupe-color: #ffffff;
   position: fixed;
-  width: 140px;
-  height: 140px;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 220px;
+  will-change: transform;
   border-radius: 999px;
-  border: 2px solid #2b3352;
+  border: 3px solid var(--loupe-color);
   background: #fff;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
   pointer-events: none;
@@ -497,9 +505,41 @@ body {
 }
 
 #loupeCanvas {
-  width: 140px;
-  height: 140px;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 220px;
+  height: 220px;
   image-rendering: pixelated;
+}
+
+#loupeCenter {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 2px solid var(--loupe-color);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+#loupeHex {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.64);
+  border-radius: 6px;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 #toast-container {
