@@ -2,94 +2,84 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <script>try{var t=localStorage.getItem("theme");if(t==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Política de Privacidade | Seletor de Cores</title>
-    <meta
-      name="description"
-      content="Entenda como o Seletor de Cores trata dados, cookies e publicidade."
-    />
-    <meta
-      name="robots"
-      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-    />
+    <meta name="description" content="Entenda como o Seletor de Cores trata dados, cookies e publicidade." />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href="https://seletordecores.com.br/privacidade/" />
-    <link
-      rel="alternate"
-      hreflang="pt-BR"
-      href="https://seletordecores.com.br/privacidade/"
-    />
+    <link rel="alternate" hreflang="pt-BR" href="https://seletordecores.com.br/privacidade/" />
     <meta property="og:title" content="Política de Privacidade | Seletor de Cores" />
-    <meta
-      property="og:description"
-      content="Leia como o Seletor de Cores lida com dados e privacidade."
-    />
+    <meta property="og:description" content="Leia como o Seletor de Cores lida com dados e privacidade." />
     <meta property="og:type" content="article" />
     <meta property="og:url" content="https://seletordecores.com.br/privacidade/" />
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6564504803370980"
-      crossorigin="anonymous"
-    ></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6564504803370980" crossorigin="anonymous"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link href="/assets/css/style.css" rel="stylesheet" />
+    <script src="/assets/js/index.js" defer></script>
   </head>
   <body>
     <div class="site-bg" aria-hidden="true"></div>
 
     <header class="topbar">
       <div class="container topbar-inner">
-        <a class="brand" href="/">Seletor de Cores</a>
-        <nav class="main-nav" aria-label="Navegação principal">
-          <a href="/">Ferramenta</a>
-          <a href="/sobre/">Sobre</a>
-          <a href="/termos/">Termos</a>
-        </nav>
+        <a class="brand" href="/">
+          <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <circle cx="32" cy="32" r="30" fill="var(--panel)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#f59e0b" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-25" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#22c55e" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-50" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-75" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#a855f7" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-100" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="10" fill="var(--text)"/>
+            <circle cx="32" cy="32" r="4" fill="var(--panel)"/>
+          </svg>
+          Seletor de Cores
+        </a>
+        <div class="topbar-right">
+          <nav class="main-nav" aria-label="Navegação principal">
+            <a href="/">Ferramenta</a>
+            <a href="/sobre/">Sobre</a>
+            <a href="/termos/">Termos</a>
+          </nav>
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema claro/escuro">
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
     <main class="container legal-main">
       <article class="legal-card">
         <h1>Política de Privacidade</h1>
-        <p>Última atualização: 17 de fevereiro de 2026.</p>
+        <span class="legal-date">Última atualização: 17 de fevereiro de 2026</span>
 
         <h2>1. Coleta e uso de dados</h2>
-        <p>
-          O Seletor de Cores foi desenvolvido para funcionar diretamente no seu
-          navegador. As imagens enviadas são processadas localmente para extração
-          de cores e não são armazenadas permanentemente por nós.
-        </p>
+        <p>O Seletor de Cores foi desenvolvido para funcionar diretamente no seu navegador. As imagens enviadas são processadas localmente para extração de cores e não são armazenadas permanentemente por nós nem transmitidas para servidores externos.</p>
 
         <h2>2. Cookies e publicidade</h2>
-        <p>
-          Podemos utilizar cookies e tecnologias semelhantes para melhorar a
-          experiência de navegação e para analisar o uso do site.
-        </p>
+        <p>Podemos utilizar cookies e tecnologias semelhantes para melhorar a experiência de navegação, exibir anúncios relevantes e analisar o uso do site. O Google AdSense pode utilizar cookies para personalizar os anúncios exibidos.</p>
 
         <h2>3. Serviços de terceiros</h2>
-        <p>
-          Podemos integrar serviços de terceiros para medir tráfego, desempenho e
-          estabilidade da plataforma, sempre buscando reduzir coleta desnecessária
-          de dados.
-        </p>
+        <p>Podemos integrar serviços de terceiros para medir tráfego, desempenho e estabilidade da plataforma, sempre buscando reduzir a coleta desnecessária de dados.</p>
 
         <h2>4. Links de terceiros</h2>
-        <p>
-          Este site pode conter links para páginas externas. Não somos
-          responsáveis pelas políticas de privacidade de sites de terceiros.
-        </p>
+        <p>Este site pode conter links para páginas externas. Não somos responsáveis pelas políticas de privacidade de sites de terceiros.</p>
 
         <h2>5. Alterações nesta política</h2>
-        <p>
-          Podemos atualizar esta política periodicamente. Recomendamos a leitura
-          desta página para acompanhar eventuais mudanças.
-        </p>
+        <p>Podemos atualizar esta política periodicamente. Recomendamos a leitura desta página para acompanhar eventuais mudanças.</p>
 
         <h2>6. Dúvidas</h2>
-        <p>
-          Para mais informações institucionais, consulte a página
-          <a href="/sobre/">Sobre</a>.
-        </p>
+        <p>Para mais informações institucionais, consulte a página <a href="/sobre/">Sobre</a>.</p>
       </article>
     </main>
 
@@ -97,15 +87,16 @@
       <div class="container footer-grid">
         <div>
           <p class="footer-brand">Seletor de Cores</p>
-          <p class="footer-muted">Ferramenta online para extrair cores de imagens.</p>
+          <p class="footer-muted">Extraia cores de imagens diretamente no navegador.</p>
         </div>
         <nav class="footer-links" aria-label="Links institucionais">
           <a href="/sobre/">Sobre nós</a>
-          <a href="/privacidade/">Política de Privacidade</a>
+          <a href="/privacidade/">Privacidade</a>
           <a href="/termos/">Termos de Uso</a>
         </nav>
       </div>
       <p class="footer-copy">© 2026 Seletor de Cores. Todos os direitos reservados.</p>
     </footer>
+    <div id="toast-container"></div>
   </body>
 </html>

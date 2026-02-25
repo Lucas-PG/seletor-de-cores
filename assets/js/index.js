@@ -1,28 +1,28 @@
 const imageInput = document.getElementById("imageUpload");
-const uploadBox = document.getElementById("uploadBox");
+const uploadBox  = document.getElementById("uploadBox");
 const toolOutput = document.getElementById("toolOutput");
-let currentObjectUrl = null;
+
+let imageCounter = 0;
+const imageUrls  = new Map(); // card element → object URL
+
+// ── Toast ────────────────────────────────────────────────────────────────────
 
 function toast(message, type = "info") {
   const container = document.getElementById("toast-container");
   if (!container) return;
-
-  // Keep only one toast visible at a time.
   container.replaceChildren();
-
   const node = document.createElement("div");
   node.className = `toast ${type}`;
   node.textContent = message;
-
   container.appendChild(node);
-
   requestAnimationFrame(() => node.classList.add("show"));
-
   setTimeout(() => {
     node.classList.remove("show");
     setTimeout(() => node.remove(), 180);
   }, 2200);
 }
+
+// ── Color math ───────────────────────────────────────────────────────────────
 
 function rgbToHex(r, g, b) {
   const toHex = (n) => n.toString(16).padStart(2, "0");
@@ -30,151 +30,217 @@ function rgbToHex(r, g, b) {
 }
 
 function rgbToHsl(r, g, b) {
-  const nr = r / 255;
-  const ng = g / 255;
-  const nb = b / 255;
+  const nr = r / 255, ng = g / 255, nb = b / 255;
   const max = Math.max(nr, ng, nb);
   const min = Math.min(nr, ng, nb);
-
-  let h = 0;
-  let s = 0;
+  let h = 0, s = 0;
   const l = (max + min) / 2;
 
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
     switch (max) {
-      case nr:
-        h = (ng - nb) / d + (ng < nb ? 6 : 0);
-        break;
-      case ng:
-        h = (nb - nr) / d + 2;
-        break;
-      default:
-        h = (nr - ng) / d + 4;
-        break;
+      case nr: h = (ng - nb) / d + (ng < nb ? 6 : 0); break;
+      case ng: h = (nb - nr) / d + 2; break;
+      default: h = (nr - ng) / d + 4; break;
     }
-
     h /= 6;
   }
-
-  return {
-    h: Math.round(h * 360),
-    s: Math.round(s * 100),
-    l: Math.round(l * 100),
-  };
-}
-
-function buildImageInfoDiv() {
-  const infoDiv = document.createElement("div");
-  infoDiv.className = "image-info-div";
-
-  const header = document.createElement("span");
-  header.className = "image-info-header";
-  header.textContent = "Códigos de cor";
-  infoDiv.appendChild(header);
-
-  const colorInputs = document.createElement("div");
-  colorInputs.className = "color-inputs";
-
-  const makeRow = (label, inputId) => {
-    const row = document.createElement("div");
-    row.className = "image-info-input";
-
-    const tag = document.createElement("div");
-    tag.className = "image-info-input-header";
-    tag.textContent = label;
-
-    const input = document.createElement("input");
-    input.type = "text";
-    input.readOnly = true;
-    input.id = inputId;
-
-    const copyDiv = document.createElement("button");
-    copyDiv.className = "input-copy";
-    copyDiv.type = "button";
-    copyDiv.setAttribute("aria-label", `Copiar ${label}`);
-
-    const copyIcon = document.createElement("img");
-    copyIcon.src = "/assets/icons/copy-regular-full.svg";
-    copyIcon.className = "copy-icon";
-    copyIcon.alt = "Copiar";
-
-    copyDiv.appendChild(copyIcon);
-
-    const copyValue = () => {
-      if (!input.value) {
-        toast("Selecione uma cor antes de copiar.", "info");
-        return;
-      }
-
-      navigator.clipboard
-        .writeText(input.value)
-        .then(() => {
-          toast(`${label} copiado.`, "success");
-          copyIcon.style.opacity = "0.5";
-          setTimeout(() => {
-            copyIcon.style.opacity = "1";
-          }, 180);
-        })
-        .catch(() => {
-          toast("Não foi possível copiar.", "error");
-        });
-    };
-
-    input.addEventListener("click", copyValue);
-    copyDiv.addEventListener("click", copyValue);
-
-    row.appendChild(tag);
-    row.appendChild(input);
-    row.appendChild(copyDiv);
-
-    return row;
-  };
-
-  colorInputs.appendChild(makeRow("HEX", "outHex"));
-  colorInputs.appendChild(makeRow("RGBA", "outRGBA"));
-  colorInputs.appendChild(makeRow("HSL", "outHsl"));
-
-  infoDiv.appendChild(colorInputs);
-
-  const colorBoxDiv = document.createElement("div");
-  colorBoxDiv.className = "color-box-div is-hidden";
-  colorBoxDiv.id = "colorBoxDiv";
-
-  const colorBoxHeader = document.createElement("span");
-  colorBoxHeader.id = "colorBoxHeader";
-
-  const colorBox = document.createElement("div");
-  colorBox.className = "color-box";
-  colorBox.id = "colorBox";
-
-  colorBoxDiv.appendChild(colorBoxHeader);
-  colorBoxDiv.appendChild(colorBox);
-  infoDiv.appendChild(colorBoxDiv);
-
-  return infoDiv;
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function getImageXY(point, img) {
-  const rect = img.getBoundingClientRect();
-  const mx = point.clientX - rect.left;
-  const my = point.clientY - rect.top;
-  const xFloat = clamp((mx / rect.width) * img.naturalWidth, 0, img.naturalWidth - 1);
-  const yFloat = clamp((my / rect.height) * img.naturalHeight, 0, img.naturalHeight - 1);
+// ── Palette extraction ────────────────────────────────────────────────────────
+
+function extractPalette(canvas, numColors = 6) {
+  const THUMB = 100;
+  const tmp = document.createElement("canvas");
+  tmp.width = THUMB;
+  tmp.height = THUMB;
+  const ctx = tmp.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(canvas, 0, 0, THUMB, THUMB);
+  const { data } = ctx.getImageData(0, 0, THUMB, THUMB);
+
+  const freq = new Map();
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue;
+    const r = Math.round(data[i]     / 24) * 24;
+    const g = Math.round(data[i + 1] / 24) * 24;
+    const b = Math.round(data[i + 2] / 24) * 24;
+    const key = (r << 16) | (g << 8) | b;
+    freq.set(key, (freq.get(key) || 0) + 1);
+  }
+
+  const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]);
+  const palette = [];
+  for (const [key] of sorted) {
+    if (palette.length >= numColors) break;
+    const r = (key >> 16) & 0xff;
+    const g = (key >> 8)  & 0xff;
+    const b =  key        & 0xff;
+    const tooClose = palette.some(([pr, pg, pb]) => {
+      const dr = r - pr, dg = g - pg, db = b - pb;
+      return (dr * dr + dg * dg + db * db) < 80 * 80;
+    });
+    if (!tooClose) palette.push([r, g, b]);
+  }
+  return palette;
+}
+
+function populatePalette(canvas, refs) {
+  const palette = extractPalette(canvas);
+  if (!palette.length) return;
+  refs.paletteSection.classList.remove("is-hidden");
+  refs.paletteSwatches.replaceChildren();
+  for (const [r, g, b] of palette) {
+    const hex = rgbToHex(r, g, b);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "palette-swatch";
+    btn.style.background = hex;
+    btn.title = hex;
+    btn.setAttribute("aria-label", `Copiar ${hex}`);
+    btn.addEventListener("click", () => {
+      navigator.clipboard.writeText(hex)
+        .then(() => toast(`${hex} copiado.`, "success"))
+        .catch(() => toast("Não foi possível copiar.", "error"));
+    });
+    refs.paletteSwatches.appendChild(btn);
+  }
+}
+
+// ── Color history (per card) ──────────────────────────────────────────────────
+
+function addToHistory(hex, cardHistory, refs) {
+  if (cardHistory[0] === hex) return;
+  cardHistory.unshift(hex);
+  if (cardHistory.length > 10) cardHistory.pop();
+  refs.historySection.classList.remove("is-hidden");
+  refs.historySwatches.replaceChildren();
+  for (const h of cardHistory) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "history-swatch";
+    btn.style.background = h;
+    btn.title = h;
+    btn.setAttribute("aria-label", `Copiar ${h}`);
+    btn.addEventListener("click", () => {
+      navigator.clipboard.writeText(h)
+        .then(() => toast(`${h} copiado.`, "success"))
+        .catch(() => toast("Não foi possível copiar.", "error"));
+    });
+    refs.historySwatches.appendChild(btn);
+  }
+}
+
+// ── UI builder ────────────────────────────────────────────────────────────────
+
+function makeCodeRow(container, label) {
+  const row = document.createElement("div");
+  row.className = "color-code-row";
+
+  const tag = document.createElement("div");
+  tag.className = "color-code-label";
+  tag.textContent = label;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.readOnly = true;
+  input.placeholder = "—";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "code-copy-btn";
+  copyBtn.type = "button";
+  copyBtn.setAttribute("aria-label", `Copiar ${label}`);
+
+  const icon = document.createElement("img");
+  icon.src = "/assets/icons/copy-regular-full.svg";
+  icon.alt = "Copiar";
+  copyBtn.appendChild(icon);
+
+  const doCopy = () => {
+    if (!input.value) { toast("Selecione uma cor antes de copiar.", "info"); return; }
+    navigator.clipboard.writeText(input.value)
+      .then(() => {
+        toast(`${label} copiado.`, "success");
+        icon.style.opacity = "0.1";
+        setTimeout(() => { icon.style.opacity = ""; }, 200);
+      })
+      .catch(() => toast("Não foi possível copiar.", "error"));
+  };
+  input.addEventListener("click", doCopy);
+  copyBtn.addEventListener("click", doCopy);
+
+  row.append(tag, input, copyBtn);
+  container.appendChild(row);
+  return input;
+}
+
+function buildColorPanel() {
+  const panel = document.createElement("div");
+  panel.className = "color-panel";
+
+  // Big swatch
+  const display = document.createElement("div");
+  display.className = "color-display";
+
+  const swatchLarge = document.createElement("div");
+  swatchLarge.className = "color-swatch-large";
+
+  const swatchInfo = document.createElement("div");
+  swatchInfo.className = "color-swatch-info";
+
+  const swatchHex = document.createElement("span");
+  swatchHex.className = "color-swatch-hex";
+  swatchHex.textContent = "—";
+
+  const swatchDot = document.createElement("span");
+  swatchDot.className = "color-swatch-dot";
+
+  swatchInfo.append(swatchHex, swatchDot);
+  display.append(swatchLarge, swatchInfo);
+  panel.appendChild(display);
+
+  // Code rows
+  const codes = document.createElement("div");
+  codes.className = "color-codes";
+  const outHex  = makeCodeRow(codes, "HEX");
+  const outRGBA = makeCodeRow(codes, "RGBA");
+  const outHsl  = makeCodeRow(codes, "HSL");
+  panel.appendChild(codes);
+
+  // Palette
+  const paletteSection = document.createElement("div");
+  paletteSection.className = "palette-section is-hidden";
+  const palLabel = document.createElement("span");
+  palLabel.className = "section-label";
+  palLabel.textContent = "Paleta dominante";
+  const paletteSwatches = document.createElement("div");
+  paletteSwatches.className = "palette-swatches";
+  paletteSection.append(palLabel, paletteSwatches);
+  panel.appendChild(paletteSection);
+
+  // History
+  const historySection = document.createElement("div");
+  historySection.className = "history-section is-hidden";
+  const histLabel = document.createElement("span");
+  histLabel.className = "section-label";
+  histLabel.textContent = "Histórico";
+  const historySwatches = document.createElement("div");
+  historySwatches.className = "history-swatches";
+  historySection.append(histLabel, historySwatches);
+  panel.appendChild(historySection);
 
   return {
-    x: Math.round(xFloat),
-    y: Math.round(yFloat),
-    xFloat,
-    yFloat,
+    panel,
+    refs: { outHex, outRGBA, outHsl, swatchLarge, swatchHex, swatchDot, paletteSection, paletteSwatches, historySection, historySwatches },
   };
 }
+
+// ── Loupe setup ───────────────────────────────────────────────────────────────
 
 const loupe = document.createElement("div");
 loupe.id = "loupe";
@@ -186,69 +252,66 @@ loupe.innerHTML = `
 document.body.appendChild(loupe);
 
 const loupeCanvas = document.getElementById("loupeCanvas");
-const loupeCtx = loupeCanvas.getContext("2d", { willReadFrequently: true });
+const loupeCtx    = loupeCanvas.getContext("2d", { willReadFrequently: true });
 const loupeCenter = document.getElementById("loupeCenter");
-const loupeHex = document.getElementById("loupeHex");
-const loupeSize = 220;
-const sampleSize = 13;
-let activeKeydownHandler = null;
+const loupeHex    = document.getElementById("loupeHex");
+const loupeSize   = 220;
+const sampleSize  = 13;
 
 function setupLoupeCanvas() {
   const dpr = Math.max(1, window.devicePixelRatio || 1);
-  loupeCanvas.width = Math.round(loupeSize * dpr);
+  loupeCanvas.width  = Math.round(loupeSize * dpr);
   loupeCanvas.height = Math.round(loupeSize * dpr);
   loupeCtx.setTransform(1, 0, 0, 1, 0, 0);
   loupeCtx.scale(dpr, dpr);
 }
-
 setupLoupeCanvas();
 window.addEventListener("resize", setupLoupeCanvas);
 
-function attachPicker(img, sourceCanvas, sourceCtx) {
-  const outHex = document.getElementById("outHex");
-  const outRGBA = document.getElementById("outRGBA");
-  const outHsl = document.getElementById("outHsl");
+// ── Pixel picker ──────────────────────────────────────────────────────────────
 
+function getImageXY(point, img) {
+  const rect = img.getBoundingClientRect();
+  const mx = point.clientX - rect.left;
+  const my = point.clientY - rect.top;
+  const xFloat = clamp((mx / rect.width)  * img.naturalWidth,  0, img.naturalWidth  - 1);
+  const yFloat = clamp((my / rect.height) * img.naturalHeight, 0, img.naturalHeight - 1);
+  return { x: Math.round(xFloat), y: Math.round(yFloat), xFloat, yFloat };
+}
+
+// Returns a cleanup function that removes the keydown listener
+function attachPicker(img, sourceCanvas, sourceCtx, refs) {
   const pixelBlock = loupeSize / sampleSize;
+  const cardHistory = [];
   let currentImgX = 0;
   let currentImgY = 0;
   let loupeActive = false;
 
   const drawLoupe = (x, y) => {
     const half = Math.floor(sampleSize / 2);
-    const sx = clamp(x - half, 0, sourceCanvas.width - sampleSize);
+    const sx = clamp(x - half, 0, sourceCanvas.width  - sampleSize);
     const sy = clamp(y - half, 0, sourceCanvas.height - sampleSize);
 
     loupeCtx.clearRect(0, 0, loupeSize, loupeSize);
     loupeCtx.imageSmoothingEnabled = false;
     loupeCtx.drawImage(sourceCanvas, sx, sy, sampleSize, sampleSize, 0, 0, loupeSize, loupeSize);
 
-    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.15)";
+    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.12)";
     loupeCtx.lineWidth = 1;
     for (let i = 0; i <= sampleSize; i++) {
-      loupeCtx.beginPath();
-      loupeCtx.moveTo(i * pixelBlock, 0);
-      loupeCtx.lineTo(i * pixelBlock, loupeSize);
-      loupeCtx.stroke();
-      loupeCtx.beginPath();
-      loupeCtx.moveTo(0, i * pixelBlock);
-      loupeCtx.lineTo(loupeSize, i * pixelBlock);
-      loupeCtx.stroke();
+      loupeCtx.beginPath(); loupeCtx.moveTo(i * pixelBlock, 0); loupeCtx.lineTo(i * pixelBlock, loupeSize); loupeCtx.stroke();
+      loupeCtx.beginPath(); loupeCtx.moveTo(0, i * pixelBlock); loupeCtx.lineTo(loupeSize, i * pixelBlock); loupeCtx.stroke();
     }
-
-    const highlightX = (x - sx) * pixelBlock;
-    const highlightY = (y - sy) * pixelBlock;
-    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.65)";
+    const hx = (x - sx) * pixelBlock;
+    const hy = (y - sy) * pixelBlock;
+    loupeCtx.strokeStyle = "rgba(255, 255, 255, 0.85)";
     loupeCtx.lineWidth = 2;
-    loupeCtx.strokeRect(highlightX, highlightY, pixelBlock, pixelBlock);
+    loupeCtx.strokeRect(hx, hy, pixelBlock, pixelBlock);
   };
 
   const getPixelColor = (x, y) => {
     const [r, g, b, a] = sourceCtx.getImageData(x, y, 1, 1).data;
-    const hex = rgbToHex(r, g, b);
-    const alpha = +(a / 255).toFixed(2);
-    const hsl = rgbToHsl(r, g, b);
-    return { r, g, b, alpha, hex, hsl };
+    return { r, g, b, alpha: +(a / 255).toFixed(2), hex: rgbToHex(r, g, b), hsl: rgbToHsl(r, g, b) };
   };
 
   const updateLiveOverlay = (hex) => {
@@ -259,19 +322,13 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
 
   const applyColor = (x, y) => {
     const { r, g, b, alpha, hex, hsl } = getPixelColor(x, y);
-    const colorBoxDiv = document.getElementById("colorBoxDiv");
-    const colorBoxHeader = document.getElementById("colorBoxHeader");
-    const colorBox = document.getElementById("colorBox");
-
-    if (colorBoxDiv && colorBoxHeader && colorBox) {
-      colorBox.style.backgroundColor = hex;
-      colorBoxDiv.classList.remove("is-hidden");
-      colorBoxHeader.textContent = "Cor selecionada";
-    }
-
-    outHex.value = hex;
-    outRGBA.value = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    outHsl.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+    refs.outHex.value  = hex;
+    refs.outRGBA.value = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    refs.outHsl.value  = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+    refs.swatchLarge.style.background = hex;
+    refs.swatchHex.textContent = hex;
+    refs.swatchDot.style.background = hex;
+    addToHistory(hex, cardHistory, refs);
   };
 
   const positionLoupe = (point) => {
@@ -281,18 +338,16 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
 
   const positionLoupeFromImageCoords = (x, y) => {
     const rect = img.getBoundingClientRect();
-    const clientX = rect.left + (x / img.naturalWidth) * rect.width;
-    const clientY = rect.top + (y / img.naturalHeight) * rect.height;
+    const clientX = rect.left + (x / img.naturalWidth)  * rect.width;
+    const clientY = rect.top  + (y / img.naturalHeight) * rect.height;
     const half = loupeSize / 2;
     loupe.style.transform = `translate(${clientX - half}px, ${clientY - half}px)`;
   };
 
   const renderPreviewAtPoint = (point) => {
     const { x, y } = getImageXY(point, img);
-    currentImgX = x;
-    currentImgY = y;
+    currentImgX = x; currentImgY = y;
     const { hex } = getPixelColor(x, y);
-
     drawLoupe(x, y);
     updateLiveOverlay(hex);
   };
@@ -313,32 +368,17 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
   const previewAtPoint = (point, sync = false) => {
     loupe.style.display = "block";
     positionLoupe(point);
-
     if (sync) {
       renderPreviewAtPoint(point);
       pendingPreviewPoint = null;
-      if (previewRafId !== null) {
-        window.cancelAnimationFrame(previewRafId);
-        previewRafId = null;
-      }
+      if (previewRafId !== null) { window.cancelAnimationFrame(previewRafId); previewRafId = null; }
       return;
     }
-
-    pendingPreviewPoint = {
-      clientX: point.clientX,
-      clientY: point.clientY,
-    };
+    pendingPreviewPoint = { clientX: point.clientX, clientY: point.clientY };
     schedulePreviewRender();
   };
 
-  const commitAtPoint = (point) => {
-    const { x, y } = getImageXY(point, img);
-    applyColor(x, y);
-  };
-
-  if (activeKeydownHandler) {
-    document.removeEventListener("keydown", activeKeydownHandler);
-  }
+  // Arrow-key navigation
   const onKeydown = (event) => {
     if (!loupeActive) return;
     let dx = 0, dy = 0;
@@ -350,7 +390,7 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
       default: return;
     }
     event.preventDefault();
-    currentImgX = clamp(currentImgX + dx, 0, img.naturalWidth - 1);
+    currentImgX = clamp(currentImgX + dx, 0, img.naturalWidth  - 1);
     currentImgY = clamp(currentImgY + dy, 0, img.naturalHeight - 1);
     drawLoupe(currentImgX, currentImgY);
     const { hex } = getPixelColor(currentImgX, currentImgY);
@@ -358,81 +398,65 @@ function attachPicker(img, sourceCanvas, sourceCtx) {
     positionLoupeFromImageCoords(currentImgX, currentImgY);
     applyColor(currentImgX, currentImgY);
   };
-  activeKeydownHandler = onKeydown;
   document.addEventListener("keydown", onKeydown);
 
   let isPointerDown = false;
   let activePointerType = "mouse";
 
-  img.addEventListener("pointerdown", (event) => {
-    isPointerDown = true;
-    loupeActive = true;
-    activePointerType = event.pointerType || "mouse";
-    img.setPointerCapture(event.pointerId);
-    previewAtPoint(event, true);
-    event.preventDefault();
+  img.addEventListener("pointerdown", (e) => {
+    isPointerDown = true; loupeActive = true;
+    activePointerType = e.pointerType || "mouse";
+    img.setPointerCapture(e.pointerId);
+    previewAtPoint(e, true);
+    e.preventDefault();
   });
 
-  img.addEventListener("pointermove", (event) => {
-    if (isPointerDown) {
-      previewAtPoint(event);
-      event.preventDefault();
-      return;
-    }
-
-    if (event.pointerType === "mouse") {
-      previewAtPoint(event);
-    }
+  img.addEventListener("pointermove", (e) => {
+    if (isPointerDown) { previewAtPoint(e); e.preventDefault(); return; }
+    if (e.pointerType === "mouse") previewAtPoint(e);
   });
 
-  img.addEventListener("pointerenter", (event) => {
-    if (event.pointerType === "mouse") {
-      img.classList.add("is-picking");
-      loupeActive = true;
-    }
+  img.addEventListener("pointerenter", (e) => {
+    if (e.pointerType === "mouse") { img.classList.add("is-picking"); loupeActive = true; }
   });
 
-  const stopPointer = (event) => {
+  const stopPointer = (e) => {
     if (!isPointerDown) return;
-
-    previewAtPoint(event, true);
+    previewAtPoint(e, true);
     isPointerDown = false;
-    img.releasePointerCapture(event.pointerId);
-
+    img.releasePointerCapture(e.pointerId);
     if (activePointerType !== "mouse") {
-      commitAtPoint(event);
+      applyColor(...Object.values(getImageXY(e, img)).slice(0, 2));
       loupe.style.display = "none";
     }
   };
 
   img.addEventListener("pointerup", stopPointer);
-  img.addEventListener("click", (event) => {
+  img.addEventListener("click", (e) => {
     if (activePointerType !== "mouse") return;
-    previewAtPoint(event, true);
-    commitAtPoint(event);
+    previewAtPoint(e, true);
+    const { x, y } = getImageXY(e, img);
+    applyColor(x, y);
   });
   img.addEventListener("pointercancel", () => {
-    isPointerDown = false;
-    loupeActive = false;
+    isPointerDown = false; loupeActive = false;
     pendingPreviewPoint = null;
-    if (previewRafId !== null) {
-      window.cancelAnimationFrame(previewRafId);
-      previewRafId = null;
-    }
+    if (previewRafId !== null) { window.cancelAnimationFrame(previewRafId); previewRafId = null; }
     loupe.style.display = "none";
     img.classList.remove("is-picking");
   });
   img.addEventListener("mouseleave", () => {
-    loupeActive = false;
-    pendingPreviewPoint = null;
-    if (previewRafId !== null) {
-      window.cancelAnimationFrame(previewRafId);
-      previewRafId = null;
-    }
+    loupeActive = false; pendingPreviewPoint = null;
+    if (previewRafId !== null) { window.cancelAnimationFrame(previewRafId); previewRafId = null; }
     loupe.style.display = "none";
     img.classList.remove("is-picking");
   });
+
+  // Return cleanup so the card remove button can unregister the keydown handler
+  return () => document.removeEventListener("keydown", onKeydown);
 }
+
+// ── Image file handling ───────────────────────────────────────────────────────
 
 function handleImageFile(file) {
   if (!file || !file.type || !file.type.startsWith("image/")) {
@@ -440,108 +464,144 @@ function handleImageFile(file) {
     return;
   }
 
-  const oldPreview = toolOutput.querySelector(".body-image-info");
-  if (oldPreview) oldPreview.remove();
-
-  if (currentObjectUrl) {
-    URL.revokeObjectURL(currentObjectUrl);
-  }
-
+  imageCounter++;
   const url = URL.createObjectURL(file);
-  currentObjectUrl = url;
 
+  // ── Card wrapper
+  const card = document.createElement("div");
+  card.className = "image-card";
+  imageUrls.set(card, url);
+
+  let pickerCleanup = null;
+
+  // ── Card bar (title + remove)
+  const cardBar = document.createElement("div");
+  cardBar.className = "image-card-bar";
+
+  const cardName = document.createElement("span");
+  cardName.className = "image-card-name";
+  cardName.textContent = `imagem ${imageCounter}${file.name ? ` — ${file.name}` : ""}`;
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "image-card-remove";
+  removeBtn.type = "button";
+  removeBtn.setAttribute("aria-label", "Remover imagem");
+  removeBtn.textContent = "✕";
+  removeBtn.addEventListener("click", () => {
+    if (pickerCleanup) pickerCleanup();
+    const cardUrl = imageUrls.get(card);
+    if (cardUrl) URL.revokeObjectURL(cardUrl);
+    imageUrls.delete(card);
+    card.remove();
+  });
+
+  cardBar.append(cardName, removeBtn);
+
+  // ── Main panel (image + color panel)
   const container = document.createElement("div");
   container.className = "body-image-info";
 
   const previewDiv = document.createElement("div");
   previewDiv.className = "preview-div";
 
-  const header = document.createElement("span");
-  header.className = "image-info-header";
-  header.textContent = "Pré-visualização";
+  const previewHeader = document.createElement("div");
+  previewHeader.className = "preview-div-header";
+  const previewLabel = document.createElement("span");
+  previewLabel.className = "section-label";
+  previewLabel.textContent = "Pré-visualização";
+  previewHeader.appendChild(previewLabel);
+  previewDiv.appendChild(previewHeader);
 
   const img = document.createElement("img");
-  img.id = "preview";
+  img.className = "preview-img";
   img.src = url;
   img.alt = "Imagem enviada para extração de cores";
-
-  const footer = document.createElement("span");
-  footer.className = "preview-image-footer";
+  previewDiv.appendChild(img);
 
   const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  const footer = document.createElement("span");
+  footer.className = "preview-footer";
   footer.textContent = isTouch
-    ? "Toque e arraste para pré-visualizar. Solte para selecionar a cor."
-    : "Passe o mouse para ampliar. Clique para selecionar a cor.";
-
-  previewDiv.appendChild(header);
-  previewDiv.appendChild(img);
+    ? "Toque e arraste para visualizar · solte para selecionar"
+    : "Passe o mouse para ampliar · clique para selecionar · setas para precisão";
   previewDiv.appendChild(footer);
 
-  const infoDiv = buildImageInfoDiv();
+  const { panel: colorPanel, refs } = buildColorPanel();
 
-  container.appendChild(previewDiv);
-  container.appendChild(infoDiv);
-  toolOutput.appendChild(container);
+  container.append(previewDiv, colorPanel);
+  card.append(cardBar, container);
+  toolOutput.appendChild(card);
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
   const sourceCanvas = document.createElement("canvas");
   const sourceCtx = sourceCanvas.getContext("2d", { willReadFrequently: true });
 
   img.onload = () => {
-    sourceCanvas.width = img.naturalWidth;
+    sourceCanvas.width  = img.naturalWidth;
     sourceCanvas.height = img.naturalHeight;
     sourceCtx.drawImage(img, 0, 0);
-
-    attachPicker(img, sourceCanvas, sourceCtx);
+    populatePalette(sourceCanvas, refs);
+    pickerCleanup = attachPicker(img, sourceCanvas, sourceCtx, refs);
     toast("Imagem carregada. Passe o mouse e clique para capturar a cor.", "success");
   };
 }
 
+// ── Event wiring ──────────────────────────────────────────────────────────────
+
 if (imageInput) {
-  imageInput.addEventListener("change", (event) => {
-    const file = event.target.files?.[0];
-    handleImageFile(file);
+  imageInput.addEventListener("change", (e) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of files) handleImageFile(file);
+    // Reset so the same file can be re-selected
+    imageInput.value = "";
   });
 }
 
 if (uploadBox) {
-  ["dragenter", "dragover"].forEach((eventName) => {
-    uploadBox.addEventListener(eventName, (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+  ["dragenter", "dragover"].forEach((name) => {
+    uploadBox.addEventListener(name, (e) => {
+      e.preventDefault(); e.stopPropagation();
       uploadBox.classList.add("drag-over");
     });
   });
-
-  ["dragleave", "drop"].forEach((eventName) => {
-    uploadBox.addEventListener(eventName, (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+  ["dragleave", "drop"].forEach((name) => {
+    uploadBox.addEventListener(name, (e) => {
+      e.preventDefault(); e.stopPropagation();
       uploadBox.classList.remove("drag-over");
     });
   });
-
-  uploadBox.addEventListener("drop", (event) => {
-    const file = event.dataTransfer?.files?.[0];
-    handleImageFile(file);
+  uploadBox.addEventListener("drop", (e) => {
+    const files = e.dataTransfer?.files;
+    if (files) for (const file of files) handleImageFile(file);
   });
 }
 
-window.addEventListener("paste", (event) => {
-  const items = event.clipboardData?.items;
+window.addEventListener("paste", (e) => {
+  // Ignore pastes from text inputs
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+  const items = e.clipboardData?.items;
   if (!items) return;
-  let hasValidImage = false;
-
   for (const item of items) {
     if (!item.type?.startsWith("image/")) continue;
-
-    const file = item.getAsFile();
-    handleImageFile(file);
-    hasValidImage = true;
-    event.preventDefault();
+    handleImageFile(item.getAsFile());
+    e.preventDefault();
     return;
   }
-
-  if (!hasValidImage) {
-    toast("Não foi possível colar. Cole uma imagem válida.", "error");
-  }
 });
+
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+
+const themeToggle = document.getElementById("themeToggle");
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    if (isDark) {
+      document.documentElement.removeAttribute("data-theme");
+      localStorage.setItem("theme", "light");
+    } else {
+      document.documentElement.setAttribute("data-theme", "dark");
+      localStorage.setItem("theme", "dark");
+    }
+  });
+}

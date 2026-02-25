@@ -2,102 +2,40 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <!-- Apply saved theme before CSS loads to prevent flash -->
+    <script>try{var t=localStorage.getItem("theme");if(t==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <title>Seletor de Cores | Extrair HEX, RGBA e HSL de Imagens</title>
-    <meta
-      name="description"
-      content="Ferramenta gratuita para extrair cores de imagens. Faça upload, clique no pixel e copie códigos HEX, RGBA e HSL instantaneamente."
-    />
-    <meta
-      name="keywords"
-      content="seletor de cores, extrair cor de imagem, color picker online, hex, rgba, hsl"
-    />
+    <meta name="description" content="Ferramenta gratuita para extrair cores de imagens. Faça upload, clique no pixel e copie códigos HEX, RGBA e HSL instantaneamente." />
+    <meta name="keywords" content="seletor de cores, extrair cor de imagem, color picker online, hex, rgba, hsl" />
     <meta name="author" content="Seletor de Cores" />
 
-    <meta
-      property="og:title"
-      content="Seletor de Cores | Extrair HEX, RGBA e HSL de Imagens"
-    />
-    <meta
-      property="og:description"
-      content="Envie uma imagem, clique em qualquer ponto e copie a cor em HEX, RGBA e HSL."
-    />
+    <meta property="og:title" content="Seletor de Cores | Extrair HEX, RGBA e HSL de Imagens" />
+    <meta property="og:description" content="Envie uma imagem, clique em qualquer ponto e copie a cor em HEX, RGBA e HSL." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://seletordecores.com.br" />
     <meta property="og:site_name" content="Seletor de Cores" />
-
     <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="Seletor de Cores | Extrair HEX, RGBA e HSL de Imagens"
-    />
-    <meta
-      name="twitter:description"
-      content="Ferramenta online gratuita para extrair cores de imagens com precisão."
-    />
-    <meta
-      name="robots"
-      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-    />
+    <meta name="twitter:title" content="Seletor de Cores | Extrair HEX, RGBA e HSL de Imagens" />
+    <meta name="twitter:description" content="Ferramenta online gratuita para extrair cores de imagens com precisão." />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow" />
     <link rel="canonical" href="https://seletordecores.com.br/" />
     <link rel="alternate" hreflang="pt-BR" href="https://seletordecores.com.br/" />
     <link rel="alternate" hreflang="x-default" href="https://seletordecores.com.br/" />
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6564504803370980"
-      crossorigin="anonymous"
-    ></script>
 
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6564504803370980" crossorigin="anonymous"></script>
     <link href="/assets/css/style.css" rel="stylesheet" />
     <script src="/assets/js/index.js" defer></script>
-
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "Seletor de Cores",
-        "applicationCategory": "DesignApplication",
-        "operatingSystem": "Web",
-        "url": "https://seletordecores.com.br",
-        "description": "Ferramenta gratuita para extrair cores de imagens e copiar códigos HEX, RGBA e HSL."
-      }
+      {"@context":"https://schema.org","@type":"WebApplication","name":"Seletor de Cores","applicationCategory":"DesignApplication","operatingSystem":"Web","url":"https://seletordecores.com.br","description":"Ferramenta gratuita para extrair cores de imagens e copiar códigos HEX, RGBA e HSL."}
     </script>
     <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Preciso instalar algo?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Não. A ferramenta funciona direto no navegador."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Minhas imagens são enviadas para servidor?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "O processamento é feito localmente no navegador para extração das cores."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Posso usar no celular?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Sim. A interface é responsiva e compatível com dispositivos móveis."
-            }
-          }
-        ]
-      }
+      {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Preciso instalar algo?","acceptedAnswer":{"@type":"Answer","text":"Não. A ferramenta funciona direto no navegador."}},{"@type":"Question","name":"Minhas imagens são enviadas para servidor?","acceptedAnswer":{"@type":"Answer","text":"O processamento é feito localmente no navegador para extração das cores."}},{"@type":"Question","name":"Posso usar no celular?","acceptedAnswer":{"@type":"Answer","text":"Sim. A interface é responsiva e compatível com dispositivos móveis."}}]}
     </script>
   </head>
   <body>
@@ -105,41 +43,74 @@
 
     <header class="topbar">
       <div class="container topbar-inner">
-        <a class="brand" href="/">Seletor de Cores</a>
-        <nav aria-label="Navegação principal" class="main-nav">
-          <a href="/sobre/">Sobre</a>
-          <a href="/privacidade/">Privacidade</a>
-          <a href="/termos/">Termos</a>
-        </nav>
+        <a class="brand" href="/">
+          <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <circle cx="32" cy="32" r="30" fill="var(--panel)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#f59e0b" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-25" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#22c55e" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-50" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-75" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="24" fill="none" stroke="#a855f7" stroke-width="8" stroke-dasharray="25 126" stroke-linecap="round" stroke-dashoffset="-100" transform="rotate(-90 32 32)"/>
+            <circle cx="32" cy="32" r="10" fill="var(--text)"/>
+            <circle cx="32" cy="32" r="4" fill="var(--panel)"/>
+          </svg>
+          Seletor de Cores
+        </a>
+        <div class="topbar-right">
+          <nav aria-label="Navegação principal" class="main-nav">
+            <a href="/sobre/">Sobre</a>
+            <a href="/privacidade/">Privacidade</a>
+            <a href="/termos/">Termos</a>
+          </nav>
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema claro/escuro">
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
     <main class="container page-main">
+
       <section class="hero">
-        <div class="hero-text">
-          <h1>Extraia cores de qualquer imagem em segundos</h1>
-          <p>
-            Faça upload da sua mídia, clique no ponto desejado e copie o código da
-            cor em <strong>HEX</strong>, <strong>RGBA</strong> e
-            <strong>HSL</strong>.
-          </p>
-          <ul class="hero-points">
-            <li>Sem cadastro</li>
-            <li>100% gratuito</li>
-            <li>Funciona no celular e no desktop</li>
-          </ul>
+        <h1>Extraia cores de <em>qualquer imagem</em></h1>
+        <p>
+          Faça upload, passe o mouse sobre o pixel desejado e copie o código em
+          <strong>HEX</strong>, <strong>RGBA</strong> ou <strong>HSL</strong> na mesma hora.
+          A paleta dominante é extraída automaticamente.
+        </p>
+        <div class="hero-tags">
+          <span class="hero-tag">Sem cadastro</span>
+          <span class="hero-tag">100% gratuito</span>
+          <span class="hero-tag">Funciona no celular</span>
+          <span class="hero-tag">Processamento local</span>
         </div>
-        <div class="hero-card" id="ferramenta">
-          <p class="tool-title">Selecionar imagem</p>
-          <p class="tool-subtitle">
-            Formatos suportados: JPG, PNG, WEBP, AVIF e GIF.
-          </p>
-          <input type="file" accept="image/*" id="imageUpload" hidden />
-          <label for="imageUpload" class="upload-box" id="uploadBox">
-            <span class="upload-label">Escolher imagem</span>
-            <span class="upload-help">ou arraste e solte aqui</span>
-          </label>
+      </section>
+
+      <section class="upload-card" id="ferramenta">
+        <div class="upload-card-header">
+          <p class="upload-card-title">Selecionar imagem</p>
+          <span class="upload-card-hint">JPG · PNG · WEBP · AVIF · GIF</span>
         </div>
+        <input type="file" accept="image/*" id="imageUpload" hidden multiple />
+        <label for="imageUpload" class="upload-box" id="uploadBox" tabindex="0">
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <span class="upload-label">Escolher arquivo</span>
+          <span class="upload-help">ou arraste · cole com Ctrl+V · múltiplas imagens</span>
+        </label>
       </section>
 
       <section class="tool-output" id="toolOutput" aria-live="polite"></section>
@@ -152,56 +123,55 @@
       <section class="section" id="como-funciona">
         <h2>Como funciona</h2>
         <div class="steps">
-          <article>
-            <h3>1. Envie sua imagem</h3>
-            <p>
-              Clique em <strong>Escolher imagem</strong> ou arraste o arquivo para
-              a área de upload.
-            </p>
-          </article>
-          <article>
-            <h3>2. Explore os pixels</h3>
-            <p>
-              Passe o mouse para ampliar a visualização e clique no ponto da cor
-              desejada.
-            </p>
-          </article>
-          <article>
-            <h3>3. Copie o código</h3>
-            <p>
-              Copie HEX, RGBA ou HSL com um clique e use no seu projeto de design
-              ou desenvolvimento.
-            </p>
-          </article>
+          <div class="step-card">
+            <div class="step-number" aria-hidden="true">1</div>
+            <h3>Envie sua imagem</h3>
+            <p>Clique em <strong>Escolher arquivo</strong>, arraste, cole com Ctrl+V ou carregue várias de uma vez.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number" aria-hidden="true">2</div>
+            <h3>Explore os pixels</h3>
+            <p>Passe o mouse para ampliar. Use as setas do teclado para precisão de um pixel por vez.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number" aria-hidden="true">3</div>
+            <h3>Copie o código</h3>
+            <p>Clique em qualquer formato — HEX, RGBA ou HSL — para copiar. A paleta é gerada automaticamente.</p>
+          </div>
         </div>
       </section>
 
       <section class="section faq" id="faq">
         <h2>Perguntas frequentes</h2>
         <details>
-          <summary>Preciso instalar algo?</summary>
-          <p>Não. A ferramenta funciona direto no navegador.</p>
+          <summary>Preciso instalar alguma coisa?</summary>
+          <p>Não. A ferramenta roda inteiramente no navegador, sem plugins ou aplicativos extras.</p>
         </details>
         <details>
-          <summary>Minhas imagens são enviadas para servidor?</summary>
-          <p>
-            O processamento é feito localmente no seu navegador. Você pode ler
-            mais na nossa <a href="/privacidade/">Política de Privacidade</a>.
-          </p>
+          <summary>Minhas imagens são enviadas para algum servidor?</summary>
+          <p>Não. Todo o processamento acontece localmente no seu dispositivo. Nenhuma imagem é transmitida. Leia mais na <a href="/privacidade/">Política de Privacidade</a>.</p>
+        </details>
+        <details>
+          <summary>Posso carregar mais de uma imagem?</summary>
+          <p>Sim. Selecione múltiplos arquivos de uma vez, arraste vários, ou carregue imagens separadamente — cada uma ganha seu próprio painel de extração.</p>
         </details>
         <details>
           <summary>Posso usar no celular?</summary>
-          <p>Sim. A interface é responsiva e compatível com dispositivos móveis.</p>
+          <p>Sim. Toque e arraste para visualizar a cor em tempo real. Solte para selecioná-la.</p>
+        </details>
+        <details>
+          <summary>O que é a paleta dominante?</summary>
+          <p>Ao carregar uma imagem, a ferramenta analisa os pixels e apresenta as cores mais frequentes, facilitando a criação de paletas para design.</p>
         </details>
       </section>
 
       <section class="section" id="guia-cores">
-        <h2>HEX, RGBA e HSL: qual formato usar?</h2>
+        <h2>HEX, RGBA e HSL — qual formato usar?</h2>
         <p>
-          O formato <strong>HEX</strong> é comum em interfaces e estilos CSS.
-          <strong>RGBA</strong> é ideal quando você precisa de transparência.
-          <strong>HSL</strong> facilita ajustes de tonalidade, saturação e
-          luminosidade durante o processo de design.
+          <strong>HEX</strong> é o formato mais usado em CSS e ferramentas de design.
+          <strong>RGBA</strong> é ideal quando você precisa controlar a transparência.
+          <strong>HSL</strong> facilita ajustes de tonalidade, saturação e luminosidade,
+          tornando a geração de variações de cor muito mais intuitiva.
         </p>
       </section>
 
@@ -216,13 +186,11 @@
       <div class="container footer-grid">
         <div>
           <p class="footer-brand">Seletor de Cores</p>
-          <p class="footer-muted">
-            Ferramenta online para extrair cores de imagens com precisão.
-          </p>
+          <p class="footer-muted">Extraia cores de imagens diretamente no navegador.</p>
         </div>
         <nav aria-label="Links institucionais" class="footer-links">
           <a href="/sobre/">Sobre nós</a>
-          <a href="/privacidade/">Política de Privacidade</a>
+          <a href="/privacidade/">Privacidade</a>
           <a href="/termos/">Termos de Uso</a>
         </nav>
       </div>
