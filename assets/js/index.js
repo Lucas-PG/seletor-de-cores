@@ -56,9 +56,189 @@ function hexToRgb(hex) {
   return { r: (v >> 16) & 0xff, g: (v >> 8) & 0xff, b: v & 0xff };
 }
 
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  const s = max === 0 ? 0 : d / max;
+  const v = max;
+  if (d !== 0) {
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, v: v * 100 };
+}
+
+function hsvToRgb(h, s, v) {
+  h /= 360; s /= 100; v /= 100;
+  const i = Math.floor(h * 6);
+  const f = h * 6 - i;
+  const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  let r, g, b;
+  switch (i % 6) {
+    case 0: r = v; g = t; b = p; break;
+    case 1: r = q; g = v; b = p; break;
+    case 2: r = p; g = v; b = t; break;
+    case 3: r = p; g = q; b = v; break;
+    case 4: r = t; g = p; b = v; break;
+    case 5: r = v; g = p; b = q; break;
+  }
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
+
+// ── Custom colour picker ──────────────────────────────────────────────────────
+
+const colorPicker = (() => {
+  let currentH = 0, currentS = 100, currentV = 100;
+  let onChangeFn = null;
+  let onCommitFn = null;
+  let justOpened = false;
+
+  // ── DOM ──
+  const popup = document.createElement("div");
+  popup.className = "color-picker-popup";
+  popup.hidden = true;
+  popup.setAttribute("role", "dialog");
+  popup.setAttribute("aria-label", "Seletor de cor");
+
+  const gradientBox = document.createElement("div");
+  gradientBox.className = "cp-gradient-box";
+
+  const gradCursor = document.createElement("div");
+  gradCursor.className = "cp-cursor";
+  gradientBox.appendChild(gradCursor);
+
+  const bottomRow = document.createElement("div");
+  bottomRow.className = "cp-bottom-row";
+
+  const hueSlider = document.createElement("div");
+  hueSlider.className = "cp-hue-slider";
+
+  const hueCursor = document.createElement("div");
+  hueCursor.className = "cp-hue-cursor";
+  hueSlider.appendChild(hueCursor);
+
+  const preview = document.createElement("div");
+  preview.className = "cp-preview";
+
+  bottomRow.append(hueSlider, preview);
+  popup.append(gradientBox, bottomRow);
+  document.body.appendChild(popup);
+
+  // ── Helpers ──
+  const relativePos = (e, el) => {
+    const r = el.getBoundingClientRect();
+    return {
+      x: clamp((e.clientX - r.left) / r.width,  0, 1),
+      y: clamp((e.clientY - r.top)  / r.height, 0, 1),
+    };
+  };
+
+  const updateUI = () => {
+    gradientBox.style.background = `
+      linear-gradient(to bottom, transparent, #000),
+      linear-gradient(to right, #fff, hsl(${currentH}, 100%, 50%))`;
+    gradCursor.style.left = `${currentS}%`;
+    gradCursor.style.top  = `${100 - currentV}%`;
+    hueCursor.style.left  = `${(currentH / 360) * 100}%`;
+    const { r, g, b } = hsvToRgb(currentH, currentS, currentV);
+    const hex = rgbToHex(r, g, b);
+    gradCursor.style.background = hex;
+    hueCursor.style.background  = `hsl(${currentH}, 100%, 50%)`;
+    preview.style.background    = hex;
+  };
+
+  const emit = () => {
+    const { r, g, b } = hsvToRgb(currentH, currentS, currentV);
+    if (typeof onChangeFn === "function") onChangeFn(r, g, b);
+  };
+
+  // ── Gradient box drag ──
+  let dragTarget = null;
+
+  gradientBox.addEventListener("pointerdown", (e) => {
+    dragTarget = "gradient";
+    gradientBox.setPointerCapture(e.pointerId);
+    const { x, y } = relativePos(e, gradientBox);
+    currentS = x * 100; currentV = (1 - y) * 100;
+    updateUI(); emit(); e.preventDefault();
+  });
+  gradientBox.addEventListener("pointermove", (e) => {
+    if (dragTarget !== "gradient") return;
+    const { x, y } = relativePos(e, gradientBox);
+    currentS = x * 100; currentV = (1 - y) * 100;
+    updateUI(); emit(); e.preventDefault();
+  });
+  gradientBox.addEventListener("pointerup", () => {
+    if (dragTarget !== "gradient") return;
+    dragTarget = null;
+    const { r, g, b } = hsvToRgb(currentH, currentS, currentV);
+    if (typeof onCommitFn === "function") onCommitFn(r, g, b);
+  });
+  gradientBox.addEventListener("pointercancel", () => { dragTarget = null; });
+
+  // ── Hue slider drag ──
+  hueSlider.addEventListener("pointerdown", (e) => {
+    dragTarget = "hue";
+    hueSlider.setPointerCapture(e.pointerId);
+    currentH = relativePos(e, hueSlider).x * 360;
+    updateUI(); emit(); e.preventDefault();
+  });
+  hueSlider.addEventListener("pointermove", (e) => {
+    if (dragTarget !== "hue") return;
+    currentH = relativePos(e, hueSlider).x * 360;
+    updateUI(); emit(); e.preventDefault();
+  });
+  hueSlider.addEventListener("pointerup", () => {
+    if (dragTarget !== "hue") return;
+    dragTarget = null;
+    const { r, g, b } = hsvToRgb(currentH, currentS, currentV);
+    if (typeof onCommitFn === "function") onCommitFn(r, g, b);
+  });
+  hueSlider.addEventListener("pointercancel", () => { dragTarget = null; });
+
+  // ── Close on outside click ──
+  document.addEventListener("pointerdown", (e) => {
+    if (popup.hidden || justOpened) return;
+    if (!popup.contains(e.target)) popup.hidden = true;
+  }, true);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !popup.hidden) popup.hidden = true;
+  });
+
+  // ── Public API ──
+  const show = (hex, anchor, onChange, onCommit) => {
+    onChangeFn = onChange;
+    onCommitFn = onCommit;
+    const { r, g, b } = hexToRgb(hex || "#ff0000");
+    ({ h: currentH, s: currentS, v: currentV } = rgbToHsv(r, g, b));
+    updateUI();
+    popup.hidden = false;
+    justOpened = true;
+    requestAnimationFrame(() => { justOpened = false; });
+
+    // Position: prefer below anchor, fall back to above
+    const rect = anchor.getBoundingClientRect();
+    const pw = 224, ph = 210;
+    let top  = rect.bottom + 6;
+    let left = rect.left;
+    if (top  + ph > window.innerHeight - 8) top  = rect.top - ph - 6;
+    if (left + pw > window.innerWidth  - 8) left = window.innerWidth - pw - 8;
+    popup.style.top  = `${Math.max(8, top)}px`;
+    popup.style.left = `${Math.max(8, left)}px`;
+  };
+
+  return { show };
+})();
 
 // ── Palette extraction ────────────────────────────────────────────────────────
 
@@ -484,7 +664,7 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
     loupeHex.textContent = hex;
   };
 
-  const applyColorRGB = (r, g, b, alpha = 1) => {
+  const applyColorRGB = (r, g, b, alpha = 1, skipHistory = false) => {
     const hex = rgbToHex(r, g, b);
     const hsl = rgbToHsl(r, g, b);
     refs.outHex.value  = hex;
@@ -493,7 +673,7 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
     refs.swatchLarge.style.background = hex;
     refs.swatchHex.textContent = hex;
     refs.swatchDot.style.background = hex;
-    addToHistory(hex, cardHistory, refs, applyColorRGB);
+    if (!skipHistory) addToHistory(hex, cardHistory, refs, applyColorRGB);
   };
 
   const applyColor = (x, y) => {
@@ -501,19 +681,14 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
     applyColorRGB(r, g, b, alpha);
   };
 
-  // Native color picker wired to the big swatch
-  const colorPickerInput = document.createElement("input");
-  colorPickerInput.type = "color";
-  colorPickerInput.style.cssText = "position:absolute;width:0;height:0;opacity:0;pointer-events:none";
-  document.body.appendChild(colorPickerInput);
-  colorPickerInput.addEventListener("input", (e) => {
-    const { r, g, b } = hexToRgb(e.target.value);
-    applyColorRGB(r, g, b);
-  });
   refs.swatchLarge.setAttribute("title", "Clique para alterar a cor");
   refs.swatchLarge.addEventListener("click", () => {
-    colorPickerInput.value = refs.outHex.value || "#000000";
-    colorPickerInput.click();
+    colorPicker.show(
+      refs.outHex.value || "#ff0000",
+      refs.swatchLarge,
+      (r, g, b) => applyColorRGB(r, g, b, 1, true),  // drag — no history
+      (r, g, b) => applyColorRGB(r, g, b),             // commit (pointerup) — adds to history
+    );
   });
 
   const positionLoupe = (point) => {
@@ -643,7 +818,6 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
     cleanup: () => {
       document.removeEventListener("keydown", onKeydown);
       window.removeEventListener("resize", refreshHighlight);
-      colorPickerInput.remove();
     },
     highlightColorAreas,
     applyColorRGB,
