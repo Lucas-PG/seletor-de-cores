@@ -3,7 +3,9 @@ const uploadBox  = document.getElementById("uploadBox");
 const toolOutput = document.getElementById("toolOutput");
 
 let imageCounter = 0;
-const imageUrls  = new Map(); // card element → object URL
+let multiMode    = false;
+const imageUrls     = new Map(); // card element → object URL
+const imageCleanups = new Map(); // card element → cleanup fn
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 
@@ -49,14 +51,27 @@ function rgbToHsl(r, g, b) {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
+function hexToRgb(hex) {
+  const v = parseInt(hex.replace("#", ""), 16);
+  return { r: (v >> 16) & 0xff, g: (v >> 8) & 0xff, b: v & 0xff };
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
 // ── Palette extraction ────────────────────────────────────────────────────────
 
+function colorDistanceSq(a, b) {
+  const dr = a.r - b.r;
+  const dg = a.g - b.g;
+  const db = a.b - b.b;
+  return (dr * dr) + (dg * dg) + (db * db);
+}
+
 function extractPalette(canvas, numColors = 6) {
-  const THUMB = 100;
+  const THUMB = 140;
+  const STEP = 20;
   const tmp = document.createElement("canvas");
   tmp.width = THUMB;
   tmp.height = THUMB;
@@ -64,57 +79,101 @@ function extractPalette(canvas, numColors = 6) {
   ctx.drawImage(canvas, 0, 0, THUMB, THUMB);
   const { data } = ctx.getImageData(0, 0, THUMB, THUMB);
 
-  const freq = new Map();
+  const buckets = new Map();
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < 128) continue;
-    const r = Math.round(data[i]     / 24) * 24;
-    const g = Math.round(data[i + 1] / 24) * 24;
-    const b = Math.round(data[i + 2] / 24) * 24;
-    const key = (r << 16) | (g << 8) | b;
-    freq.set(key, (freq.get(key) || 0) + 1);
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    const qr = Math.floor(r / STEP);
+    const qg = Math.floor(g / STEP);
+    const qb = Math.floor(b / STEP);
+    const bucketKey = `${qr}-${qg}-${qb}`;
+
+    let bucket = buckets.get(bucketKey);
+    if (!bucket) {
+      bucket = { count: 0, exact: new Map() };
+      buckets.set(bucketKey, bucket);
+    }
+    bucket.count += 1;
+
+    const exactKey = (r << 16) | (g << 8) | b;
+    bucket.exact.set(exactKey, (bucket.exact.get(exactKey) || 0) + 1);
   }
 
-  const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]);
+  const sortedBuckets = [...buckets.values()].sort((a, b) => b.count - a.count);
   const palette = [];
-  for (const [key] of sorted) {
+  for (const bucket of sortedBuckets) {
     if (palette.length >= numColors) break;
-    const r = (key >> 16) & 0xff;
-    const g = (key >> 8)  & 0xff;
-    const b =  key        & 0xff;
-    const tooClose = palette.some(([pr, pg, pb]) => {
-      const dr = r - pr, dg = g - pg, db = b - pb;
-      return (dr * dr + dg * dg + db * db) < 80 * 80;
-    });
-    if (!tooClose) palette.push([r, g, b]);
+
+    let topExactKey = null;
+    let topCount = 0;
+    for (const [exactKey, count] of bucket.exact.entries()) {
+      if (count > topCount) {
+        topCount = count;
+        topExactKey = exactKey;
+      }
+    }
+    if (topExactKey === null) continue;
+
+    const candidate = {
+      r: (topExactKey >> 16) & 0xff,
+      g: (topExactKey >> 8) & 0xff,
+      b: topExactKey & 0xff,
+    };
+    const tooClose = palette.some((picked) => colorDistanceSq(candidate, picked) < (58 * 58));
+    if (!tooClose) palette.push(candidate);
   }
+
   return palette;
 }
 
-function populatePalette(canvas, refs) {
+function populatePalette(canvas, refs, onSwatchSelect) {
   const palette = extractPalette(canvas);
   if (!palette.length) return;
   refs.paletteSection.classList.remove("is-hidden");
   refs.paletteSwatches.replaceChildren();
-  for (const [r, g, b] of palette) {
+  let activeSwatch = null;
+  const clearHighlight = () => {
+    if (!activeSwatch) return;
+    activeSwatch.classList.remove("is-active");
+    activeSwatch = null;
+    if (typeof onSwatchSelect === "function") onSwatchSelect(null);
+  };
+
+  for (const color of palette) {
+    const { r, g, b } = color;
     const hex = rgbToHex(r, g, b);
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "palette-swatch";
     btn.style.background = hex;
     btn.title = hex;
-    btn.setAttribute("aria-label", `Copiar ${hex}`);
+    btn.setAttribute("aria-label", `Mostrar áreas da cor ${hex}`);
     btn.addEventListener("click", () => {
       navigator.clipboard.writeText(hex)
         .then(() => toast(`${hex} copiado.`, "success"))
         .catch(() => toast("Não foi possível copiar.", "error"));
+
+      if (activeSwatch === btn) {
+        clearHighlight();
+        return;
+      }
+      if (activeSwatch) activeSwatch.classList.remove("is-active");
+      activeSwatch = btn;
+      activeSwatch.classList.add("is-active");
+      if (typeof onSwatchSelect === "function") onSwatchSelect({ ...color, hex });
     });
     refs.paletteSwatches.appendChild(btn);
   }
+
+  return { clearHighlight };
 }
 
 // ── Color history (per card) ──────────────────────────────────────────────────
 
-function addToHistory(hex, cardHistory, refs) {
+function addToHistory(hex, cardHistory, refs, onSelect) {
   if (cardHistory[0] === hex) return;
   cardHistory.unshift(hex);
   if (cardHistory.length > 10) cardHistory.pop();
@@ -126,8 +185,10 @@ function addToHistory(hex, cardHistory, refs) {
     btn.className = "history-swatch";
     btn.style.background = h;
     btn.title = h;
-    btn.setAttribute("aria-label", `Copiar ${h}`);
+    btn.setAttribute("aria-label", `Selecionar ${h}`);
     btn.addEventListener("click", () => {
+      const { r, g, b } = hexToRgb(h);
+      if (typeof onSelect === "function") onSelect(r, g, b);
       navigator.clipboard.writeText(h)
         .then(() => toast(`${h} copiado.`, "success"))
         .catch(() => toast("Não foi possível copiar.", "error"));
@@ -279,13 +340,116 @@ function getImageXY(point, img) {
   return { x: Math.round(xFloat), y: Math.round(yFloat), xFloat, yFloat };
 }
 
-// Returns a cleanup function that removes the keydown listener
-function attachPicker(img, sourceCanvas, sourceCtx, refs) {
+// Returns cleanup + palette highlight controls for this image card
+function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
   const pixelBlock = loupeSize / sampleSize;
   const cardHistory = [];
   let currentImgX = 0;
   let currentImgY = 0;
   let loupeActive = false;
+  const overlayCtx = overlayCanvas ? overlayCanvas.getContext("2d", { willReadFrequently: true }) : null;
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const overlayMaskCache = new Map();
+  let sourceData = null;
+  let activeHighlightedRGB = null;
+
+  const getImageDrawRect = () => {
+    const rect = img.getBoundingClientRect();
+    const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
+    const width = img.naturalWidth * scale;
+    const height = img.naturalHeight * scale;
+    return {
+      canvasWidth: rect.width,
+      canvasHeight: rect.height,
+      x: (rect.width - width) / 2,
+      y: (rect.height - height) / 2,
+      width,
+      height,
+    };
+  };
+
+  const syncOverlaySize = () => {
+    if (!overlayCanvas || !overlayCtx) return;
+    const rect = img.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const targetWidth = Math.round(rect.width * dpr);
+    const targetHeight = Math.round(rect.height * dpr);
+    if (overlayCanvas.width !== targetWidth || overlayCanvas.height !== targetHeight) {
+      overlayCanvas.width = targetWidth;
+      overlayCanvas.height = targetHeight;
+      overlayCtx.setTransform(1, 0, 0, 1, 0, 0);
+      overlayCtx.scale(dpr, dpr);
+    }
+  };
+
+  const buildMaskForColor = (rgb) => {
+    const cacheKey = `${rgb.r}-${rgb.g}-${rgb.b}`;
+    const cached = overlayMaskCache.get(cacheKey);
+    if (cached) return cached;
+
+    if (!sourceData) sourceData = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height).data;
+
+    const mask = document.createElement("canvas");
+    mask.width = sourceCanvas.width;
+    mask.height = sourceCanvas.height;
+    const maskCtx = mask.getContext("2d", { willReadFrequently: true });
+    const output = maskCtx.createImageData(mask.width, mask.height);
+    const out = output.data;
+    const toleranceSq = 28 * 28;
+    let matches = 0;
+
+    for (let i = 0; i < sourceData.length; i += 4) {
+      if (sourceData[i + 3] < 30) continue;
+      const dr = sourceData[i] - rgb.r;
+      const dg = sourceData[i + 1] - rgb.g;
+      const db = sourceData[i + 2] - rgb.b;
+      if ((dr * dr) + (dg * dg) + (db * db) <= toleranceSq) {
+        out[i] = sourceData[i];
+        out[i + 1] = sourceData[i + 1];
+        out[i + 2] = sourceData[i + 2];
+        out[i + 3] = 235;
+        matches += 1;
+      }
+    }
+
+    maskCtx.putImageData(output, 0, 0);
+    const result = { mask, matches };
+    overlayMaskCache.set(cacheKey, result);
+    return result;
+  };
+
+  const renderColorAreas = (rgb, hexForToast = null) => {
+    if (!overlayCanvas || !overlayCtx) return;
+    syncOverlaySize();
+    const { canvasWidth, canvasHeight, x, y, width, height } = getImageDrawRect();
+    overlayCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+    if (!rgb) return;
+
+    const { mask, matches } = buildMaskForColor(rgb);
+    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+    overlayCtx.fillStyle = luminance < 0.25
+      ? "rgba(235, 235, 248, 0.84)"
+      : "rgba(8, 10, 14, 0.8)";
+    overlayCtx.fillRect(x, y, width, height);
+    overlayCtx.drawImage(mask, x, y, width, height);
+
+    if (!matches && hexForToast) toast(`Nenhuma área encontrada para ${hexForToast}.`, "info");
+  };
+
+  const highlightColorAreas = (color) => {
+    if (!color) {
+      activeHighlightedRGB = null;
+      renderColorAreas(null);
+      return;
+    }
+    activeHighlightedRGB = { r: color.r, g: color.g, b: color.b };
+    renderColorAreas(activeHighlightedRGB, color.hex);
+  };
+
+  const refreshHighlight = () => {
+    if (!activeHighlightedRGB) return;
+    renderColorAreas(activeHighlightedRGB);
+  };
 
   const drawLoupe = (x, y) => {
     const half = Math.floor(sampleSize / 2);
@@ -320,16 +484,37 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs) {
     loupeHex.textContent = hex;
   };
 
-  const applyColor = (x, y) => {
-    const { r, g, b, alpha, hex, hsl } = getPixelColor(x, y);
+  const applyColorRGB = (r, g, b, alpha = 1) => {
+    const hex = rgbToHex(r, g, b);
+    const hsl = rgbToHsl(r, g, b);
     refs.outHex.value  = hex;
     refs.outRGBA.value = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     refs.outHsl.value  = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
     refs.swatchLarge.style.background = hex;
     refs.swatchHex.textContent = hex;
     refs.swatchDot.style.background = hex;
-    addToHistory(hex, cardHistory, refs);
+    addToHistory(hex, cardHistory, refs, applyColorRGB);
   };
+
+  const applyColor = (x, y) => {
+    const { r, g, b, alpha } = getPixelColor(x, y);
+    applyColorRGB(r, g, b, alpha);
+  };
+
+  // Native color picker wired to the big swatch
+  const colorPickerInput = document.createElement("input");
+  colorPickerInput.type = "color";
+  colorPickerInput.style.cssText = "position:absolute;width:0;height:0;opacity:0;pointer-events:none";
+  document.body.appendChild(colorPickerInput);
+  colorPickerInput.addEventListener("input", (e) => {
+    const { r, g, b } = hexToRgb(e.target.value);
+    applyColorRGB(r, g, b);
+  });
+  refs.swatchLarge.setAttribute("title", "Clique para alterar a cor");
+  refs.swatchLarge.addEventListener("click", () => {
+    colorPickerInput.value = refs.outHex.value || "#000000";
+    colorPickerInput.click();
+  });
 
   const positionLoupe = (point) => {
     const half = loupeSize / 2;
@@ -399,6 +584,7 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs) {
     applyColor(currentImgX, currentImgY);
   };
   document.addEventListener("keydown", onKeydown);
+  window.addEventListener("resize", refreshHighlight);
 
   let isPointerDown = false;
   let activePointerType = "mouse";
@@ -452,17 +638,36 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs) {
     img.classList.remove("is-picking");
   });
 
-  // Return cleanup so the card remove button can unregister the keydown handler
-  return () => document.removeEventListener("keydown", onKeydown);
+  // Return cleanup and callbacks for the card lifecycle
+  return {
+    cleanup: () => {
+      document.removeEventListener("keydown", onKeydown);
+      window.removeEventListener("resize", refreshHighlight);
+      colorPickerInput.remove();
+    },
+    highlightColorAreas,
+    applyColorRGB,
+  };
 }
 
 // ── Image file handling ───────────────────────────────────────────────────────
+
+function clearAllImages() {
+  for (const cleanup of imageCleanups.values()) cleanup();
+  imageCleanups.clear();
+  for (const url of imageUrls.values()) URL.revokeObjectURL(url);
+  imageUrls.clear();
+  toolOutput.replaceChildren();
+  imageCounter = 0;
+}
 
 function handleImageFile(file) {
   if (!file || !file.type || !file.type.startsWith("image/")) {
     toast("Selecione um arquivo de imagem válido.", "error");
     return;
   }
+
+  if (!multiMode) clearAllImages();
 
   imageCounter++;
   const url = URL.createObjectURL(file);
@@ -489,6 +694,7 @@ function handleImageFile(file) {
   removeBtn.textContent = "✕";
   removeBtn.addEventListener("click", () => {
     if (pickerCleanup) pickerCleanup();
+    imageCleanups.delete(card);
     const cardUrl = imageUrls.get(card);
     if (cardUrl) URL.revokeObjectURL(cardUrl);
     imageUrls.delete(card);
@@ -509,14 +715,27 @@ function handleImageFile(file) {
   const previewLabel = document.createElement("span");
   previewLabel.className = "section-label";
   previewLabel.textContent = "Pré-visualização";
-  previewHeader.appendChild(previewLabel);
+  const resetHighlightBtn = document.createElement("button");
+  resetHighlightBtn.type = "button";
+  resetHighlightBtn.className = "preview-reset-btn is-hidden";
+  resetHighlightBtn.textContent = "Ver imagem original";
+  previewHeader.append(previewLabel, resetHighlightBtn);
   previewDiv.appendChild(previewHeader);
+
+  const previewStage = document.createElement("div");
+  previewStage.className = "preview-stage";
 
   const img = document.createElement("img");
   img.className = "preview-img";
   img.src = url;
   img.alt = "Imagem enviada para extração de cores";
-  previewDiv.appendChild(img);
+
+  const overlayCanvas = document.createElement("canvas");
+  overlayCanvas.className = "preview-overlay";
+  overlayCanvas.setAttribute("aria-hidden", "true");
+
+  previewStage.append(img, overlayCanvas);
+  previewDiv.appendChild(previewStage);
 
   const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   const footer = document.createElement("span");
@@ -535,15 +754,27 @@ function handleImageFile(file) {
 
   const sourceCanvas = document.createElement("canvas");
   const sourceCtx = sourceCanvas.getContext("2d", { willReadFrequently: true });
+  let paletteApi = null;
 
   img.onload = () => {
     sourceCanvas.width  = img.naturalWidth;
     sourceCanvas.height = img.naturalHeight;
     sourceCtx.drawImage(img, 0, 0);
-    populatePalette(sourceCanvas, refs);
-    pickerCleanup = attachPicker(img, sourceCanvas, sourceCtx, refs);
+    const pickerApi = attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas);
+    pickerCleanup = pickerApi.cleanup;
+    imageCleanups.set(card, pickerApi.cleanup);
+    paletteApi = populatePalette(sourceCanvas, refs, (color) => {
+      pickerApi.highlightColorAreas(color);
+      resetHighlightBtn.classList.toggle("is-hidden", !color);
+      if (color) pickerApi.applyColorRGB(color.r, color.g, color.b);
+    });
     toast("Imagem carregada. Passe o mouse e clique para capturar a cor.", "success");
   };
+
+  resetHighlightBtn.addEventListener("click", () => {
+    if (!paletteApi) return;
+    paletteApi.clearHighlight();
+  });
 }
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
@@ -551,7 +782,7 @@ function handleImageFile(file) {
 if (imageInput) {
   imageInput.addEventListener("change", (e) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || !files.length) return;
     for (const file of files) handleImageFile(file);
     // Reset so the same file can be re-selected
     imageInput.value = "";
@@ -573,7 +804,8 @@ if (uploadBox) {
   });
   uploadBox.addEventListener("drop", (e) => {
     const files = e.dataTransfer?.files;
-    if (files) for (const file of files) handleImageFile(file);
+    if (!files || !files.length) return;
+    for (const file of files) handleImageFile(file);
   });
 }
 
@@ -605,3 +837,16 @@ if (themeToggle) {
     }
   });
 }
+
+// ── Multi-image toggle ────────────────────────────────────────────────────────
+
+const multiToggle = document.getElementById("multiToggle");
+if (multiToggle) {
+  multiToggle.addEventListener("click", () => {
+    multiMode = !multiMode;
+    multiToggle.classList.toggle("is-active", multiMode);
+    multiToggle.setAttribute("aria-pressed", String(multiMode));
+    imageInput.multiple = multiMode;
+  });
+}
+

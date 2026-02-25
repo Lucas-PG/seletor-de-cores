@@ -97,9 +97,18 @@
       <section class="upload-card" id="ferramenta">
         <div class="upload-card-header">
           <p class="upload-card-title">Selecionar imagem</p>
-          <span class="upload-card-hint">JPG · PNG · WEBP · AVIF · GIF</span>
+          <div class="upload-card-actions">
+            <button class="multi-toggle" id="multiToggle" type="button" aria-pressed="false" aria-label="Ativar modo de múltiplas imagens">
+              <svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="1" width="10" height="8" rx="1.5"/>
+                <rect x="1" y="4" width="10" height="8" rx="1.5"/>
+              </svg>
+              Múltiplas imagens
+            </button>
+            <span class="upload-card-hint">JPG · PNG · WEBP · AVIF · GIF</span>
+          </div>
         </div>
-        <input type="file" accept="image/*" id="imageUpload" hidden multiple />
+        <input type="file" accept="image/*" id="imageUpload" hidden />
         <label for="imageUpload" class="upload-box" id="uploadBox" tabindex="0">
           <div class="upload-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -109,7 +118,7 @@
             </svg>
           </div>
           <span class="upload-label">Escolher arquivo</span>
-          <span class="upload-help">ou arraste · cole com Ctrl+V · múltiplas imagens</span>
+          <span class="upload-help">ou arraste · cole com Ctrl+V</span>
         </label>
       </section>
 
