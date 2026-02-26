@@ -226,9 +226,10 @@ const colorPicker = (() => {
     justOpened = true;
     requestAnimationFrame(() => { justOpened = false; });
 
-    // Position: prefer below anchor, fall back to above
+    // Position: prefer below anchor, fall back to above — measure after showing
     const rect = anchor.getBoundingClientRect();
-    const pw = 224, ph = 210;
+    const pw = popup.offsetWidth;
+    const ph = popup.offsetHeight;
     let top  = rect.bottom + 6;
     let left = rect.left;
     if (top  + ph > window.innerHeight - 8) top  = rect.top - ph - 6;
@@ -1022,5 +1023,12 @@ if (multiToggle) {
     multiToggle.setAttribute("aria-pressed", String(multiMode));
     imageInput.multiple = multiMode;
   });
+}
+
+// ── Touch UX tweaks ───────────────────────────────────────────────────────────
+
+if ("ontouchstart" in window || navigator.maxTouchPoints > 0) {
+  const uploadHelp = document.querySelector(".upload-help");
+  if (uploadHelp) uploadHelp.textContent = "ou arraste a imagem para cá";
 }
 

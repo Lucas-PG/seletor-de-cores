@@ -1198,7 +1198,12 @@ body {
   .preview-div {
     border-right: 0;
     border-bottom: 1px solid var(--border);
-    min-height: 260px;
+  }
+
+  /* Give the stage a concrete height so object-fit:contain works in auto-height layout */
+  .preview-stage {
+    flex: none;
+    height: 280px;
   }
 
   .steps {
@@ -1217,10 +1222,72 @@ body {
 
   .page-main {
     padding-top: 1.75rem;
+    padding-bottom: 3rem;
+  }
+
+  .hero {
+    margin-bottom: 1.5rem;
   }
 
   .hero h1 {
     font-size: 1.65rem;
+  }
+
+  /* Upload card */
+  .upload-card {
+    padding: 1rem;
+  }
+
+  .upload-card-header {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .upload-card-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .upload-box {
+    min-height: 120px;
+    padding: 1.25rem;
+  }
+
+  /* Image panel */
+  .preview-stage {
+    height: 220px;
+  }
+
+  .preview-div {
+    padding: 0.9rem;
+    gap: 0.6rem;
+  }
+
+  .color-panel {
+    padding: 1rem;
+    gap: 0.9rem;
+  }
+
+  .color-swatch-large {
+    height: 64px;
+  }
+
+  /* Bigger touch targets for history */
+  .history-swatch {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Color picker: use more of the screen width on phones */
+  .color-picker-popup {
+    width: calc(100vw - 24px);
+    max-width: 300px;
+  }
+
+  /* Generic sections */
+  .section {
+    padding: 1.2rem;
   }
 
   .legal-card {
@@ -1230,5 +1297,16 @@ body {
   .footer-grid {
     flex-direction: column;
     gap: 0.75rem;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Hide format hint on very narrow screens — multi-toggle already uses the row */
+  .upload-card-hint {
+    display: none;
+  }
+
+  .preview-stage {
+    height: 180px;
   }
 }
