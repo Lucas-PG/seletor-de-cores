@@ -825,19 +825,14 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
     previewAtPoint(e, true);
     isPointerDown = false;
     img.releasePointerCapture(e.pointerId);
+    const { x, y } = getImageXY(e, img);
+    applyColor(x, y);
     if (activePointerType !== "mouse") {
-      applyColor(...Object.values(getImageXY(e, img)).slice(0, 2));
       loupe.style.display = "none";
     }
   };
 
   img.addEventListener("pointerup", stopPointer);
-  img.addEventListener("click", (e) => {
-    if (activePointerType !== "mouse") return;
-    previewAtPoint(e, true);
-    const { x, y } = getImageXY(e, img);
-    applyColor(x, y);
-  });
   img.addEventListener("pointercancel", () => {
     isPointerDown = false; loupeActive = false;
     pendingPreviewPoint = null;
