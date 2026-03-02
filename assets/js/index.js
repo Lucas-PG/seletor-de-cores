@@ -488,17 +488,15 @@ const loupe = document.createElement("div");
 loupe.id = "loupe";
 loupe.innerHTML = `
   <canvas id="loupeCanvas" width="220" height="220"></canvas>
-  <div id="loupeCenter" aria-hidden="true"></div>
   <div id="loupeHex" aria-live="polite">#000000</div>
 `;
 document.body.appendChild(loupe);
 
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx    = loupeCanvas.getContext("2d", { willReadFrequently: true });
-const loupeCenter = document.getElementById("loupeCenter");
 const loupeHex    = document.getElementById("loupeHex");
 const loupeSize   = 220;
-const sampleSize  = 13;
+const sampleSize  = 31;
 
 function setupLoupeCanvas() {
   const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -637,21 +635,63 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
     const sx = clamp(x - half, 0, sourceCanvas.width  - sampleSize);
     const sy = clamp(y - half, 0, sourceCanvas.height - sampleSize);
 
-    loupeCtx.clearRect(0, 0, loupeSize, loupeSize);
+    // Read the center pixel color for the border ring (like hyprpicker's outer ring).
+    const [cr, cg, cb] = sourceCtx.getImageData(x, y, 1, 1).data;
+
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const canvasSize = loupeSize * dpr; // actual canvas pixel dimensions
+
+    loupeCtx.save();
+
+    // ── 1. Clip everything to the circular lens ────────────────────────────────
+    loupeCtx.clearRect(0, 0, canvasSize, canvasSize);
+    loupeCtx.beginPath();
+    loupeCtx.arc(loupeSize / 2, loupeSize / 2, loupeSize / 2, 0, Math.PI * 2);
+    loupeCtx.clip();
+
+    // ── 2. Nearest-neighbour pixel blit (CAIRO_FILTER_NEAREST equivalent) ─────
     loupeCtx.imageSmoothingEnabled = false;
     loupeCtx.drawImage(sourceCanvas, sx, sy, sampleSize, sampleSize, 0, 0, loupeSize, loupeSize);
 
-    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.12)";
-    loupeCtx.lineWidth = 1;
-    for (let i = 0; i <= sampleSize; i++) {
-      loupeCtx.beginPath(); loupeCtx.moveTo(i * pixelBlock, 0); loupeCtx.lineTo(i * pixelBlock, loupeSize); loupeCtx.stroke();
-      loupeCtx.beginPath(); loupeCtx.moveTo(0, i * pixelBlock); loupeCtx.lineTo(loupeSize, i * pixelBlock); loupeCtx.stroke();
+    // ── 3. Subtle pixel grid lines ─────────────────────────────────────────────
+    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.15)";
+    loupeCtx.lineWidth = 0.5;
+    for (let i = 1; i < sampleSize; i++) {
+      const p = i * pixelBlock;
+      loupeCtx.beginPath(); loupeCtx.moveTo(p, 0); loupeCtx.lineTo(p, loupeSize); loupeCtx.stroke();
+      loupeCtx.beginPath(); loupeCtx.moveTo(0, p); loupeCtx.lineTo(loupeSize, p); loupeCtx.stroke();
     }
+
+    // ── 4. Crosshair: white outer rect + black inner rect around center pixel ──
+    //    (mirrors hyprpicker's scope reticle style)
     const hx = (x - sx) * pixelBlock;
     const hy = (y - sy) * pixelBlock;
-    loupeCtx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+
     loupeCtx.lineWidth = 2;
-    loupeCtx.strokeRect(hx, hy, pixelBlock, pixelBlock);
+    loupeCtx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+    loupeCtx.strokeRect(hx - 1, hy - 1, pixelBlock + 2, pixelBlock + 2);
+
+    loupeCtx.lineWidth = 1;
+    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.9)";
+    loupeCtx.strokeRect(hx + 1.5, hy + 1.5, pixelBlock - 3, pixelBlock - 3);
+
+    loupeCtx.restore();
+
+    // ── 5. Colored border ring drawn outside the clip ─────────────────────────
+    //    (like hyprpicker: outer circle filled with the picked color)
+    const borderW = 5;
+    loupeCtx.beginPath();
+    loupeCtx.arc(loupeSize / 2, loupeSize / 2, loupeSize / 2 - borderW / 2, 0, Math.PI * 2);
+    loupeCtx.lineWidth = borderW;
+    loupeCtx.strokeStyle = `rgb(${cr}, ${cg}, ${cb})`;
+    loupeCtx.stroke();
+
+    // Thin dark outer edge for contrast on any background.
+    loupeCtx.beginPath();
+    loupeCtx.arc(loupeSize / 2, loupeSize / 2, loupeSize / 2 - 0.5, 0, Math.PI * 2);
+    loupeCtx.lineWidth = 1;
+    loupeCtx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+    loupeCtx.stroke();
   };
 
   const getPixelColor = (x, y) => {
@@ -660,8 +700,6 @@ function attachPicker(img, sourceCanvas, sourceCtx, refs, overlayCanvas) {
   };
 
   const updateLiveOverlay = (hex) => {
-    loupe.style.setProperty("--loupe-color", hex);
-    loupeCenter.style.borderColor = hex;
     loupeHex.textContent = hex;
   };
 
